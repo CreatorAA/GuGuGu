@@ -46,7 +46,10 @@ public class MessagePipeline {
     public Component processMessage(ServerPlayer sender, String message) {
         MessageContext context = new MessageContext(sender, message);
         for (MessageProcessor processor : processors) {
-            processor.process(context);
+            MessageProcessorInfo info = processorInfoMap.get(processor);
+            if (info != null && info.isEnabled()) {
+                processor.process(context);
+            }
         }
         return context.getResult();
     }
@@ -78,6 +81,23 @@ public class MessagePipeline {
     private Component errorComponent(String message) {
         return Component.literal(message)
                 .withStyle(ChatFormatting.RED);
+    }
+
+    /**
+     * 重新加载所有处理器，根据当前配置启用/禁用
+     */
+    public synchronized void reloadProcessors() {
+        processors.clear();
+        for (Map.Entry<MessageProcessor, MessageProcessorInfo> entry : processorInfoMap.entrySet()) {
+            MessageProcessor processor = entry.getKey();
+            MessageProcessorInfo info = entry.getValue();
+            if (info.isEnabled() && !finalProcessors.contains(processor)) {
+                addAndSortProcessor(processor);
+            }
+        }
+
+        processors.addAll(finalProcessors);
+        processors.sort(Comparator.comparingInt(MessageProcessor::getPriority));
     }
 
     public MessageProcessorInfo[] getProcessorInfos() {

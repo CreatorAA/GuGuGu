@@ -3,6 +3,7 @@ package online.pigeonshouse.gugugu.utils;
 import lombok.Getter;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -13,6 +14,7 @@ import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.*;
 import net.minecraft.world.phys.shapes.CollisionContext;
+import online.pigeonshouse.gugugu.GuGuGu;
 
 import java.util.List;
 import java.util.Map;
@@ -185,5 +187,14 @@ public class MinecraftUtil {
      */
     public static <T> List<T> iterableToList(Iterable<T> iterable) {
         return StreamSupport.stream(iterable.spliterator(), false).collect(Collectors.toList());
+    }
+
+    public static MutableComponent translate(String key, Object... args) {
+        String lang = GuGuGu.getINSTANCE()
+                .getLang()
+                .get(key);
+
+        if (lang != null) return Component.translatableWithFallback(key, lang, args);
+        return Component.translatable(key, args);
     }
 }

@@ -4,16 +4,15 @@
   "package": "online.pigeonshouse.gugugu.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
-    "CommandsMixin",
     "ConnectionMixin",
-    "EntityMixin",
     "IOWorkerMixin",
     "KickCommandMixin",
-    "MinecraftServerMixin",
     "PlayerListMixin",
     "RegionFileStorageMixin",
-    "ServerGamePacketListenerImplMixin",
-    "UserWhiteListFixMixin"
+    "ServerConfigurationPacketListenerImplMixin",
+    "StoredUserEntryMixin",
+    "UserWhiteListFixMixin",
+    "WhitelistCommandMixin"
   ],
   "client": [
   ],
