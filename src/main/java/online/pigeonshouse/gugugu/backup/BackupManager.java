@@ -426,7 +426,7 @@ public class BackupManager {
     }
 
     private void updateChunkBlockEntities(WorldManage manage, LevelChunk chunk) {
-        for (BlockPos pos : chunk.getBlockEntities().keySet()) {
+        for (BlockPos pos : new HashMap<>(chunk.getBlockEntities()).keySet()) {
             chunk.removeBlockEntity(pos);
         }
 
