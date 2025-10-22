@@ -121,7 +121,7 @@ public class ModConfig {
     private void createDefaultConfig() {
         enableFakePlayer = false;
         enableMessageHandler = false;
-        disabledMessageHandlers = List.of();
+        disabledMessageHandlers = List.of("teleport");
         enableTeleport = false;
         whiteListDisableUidCheck = false;
         enableBackup = false;
