@@ -5,6 +5,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.ComponentUtils;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -71,14 +72,6 @@ public class MinecraftUtil {
      * @return lore ListTag
      */
     public static ListTag addLore(ItemStack itemStack, Component component) {
-//        ItemLore itemLore = itemStack.get(DataComponents.LORE);
-//
-//        if (itemLore == null) {
-//            itemLore = new ItemLore(List.of());
-//            return itemStack.set(DataComponents.LORE, itemLore);
-//        }
-//
-//        return itemStack.set(DataComponents.LORE, itemLore.withLineAdded(component));
         CompoundTag tag = itemStack.getOrCreateTag();
 
         if (!tag.contains(ItemStack.TAG_DISPLAY, 10)) {
@@ -92,24 +85,12 @@ public class MinecraftUtil {
         }
 
         ListTag loreList = displayTag.getList(ItemStack.TAG_LORE, 8);
-        loreList.add(StringTag.valueOf(component.getString()));
+        loreList.add(StringTag.valueOf(Component.Serializer.toJson(component)));
 
         return loreList;
     }
 
     public static ListTag addLore(ItemStack itemStack, Component... components) {
-//        ItemLore itemLore = itemStack.get(DataComponents.LORE);
-//
-//        if (itemLore == null) {
-//            itemLore = new ItemLore(List.of(components));
-//            return itemStack.set(DataComponents.LORE, itemLore);
-//        }
-//
-//        for (Component component : components) {
-//            itemLore = itemLore.withLineAdded(component);
-//        }
-//
-//        return itemStack.set(DataComponents.LORE, itemLore);
         CompoundTag tag = itemStack.getOrCreateTag();
 
         if (!tag.contains(ItemStack.TAG_DISPLAY, 10)) {
@@ -124,8 +105,10 @@ public class MinecraftUtil {
 
         ListTag loreList = displayTag.getList(ItemStack.TAG_LORE, 8);
         for (Component component : components) {
-            loreList.add(StringTag.valueOf(component.getString()));
+            loreList.add(StringTag.valueOf(Component.Serializer.toJson(component)));
         }
+
+        displayTag.put("Lore", loreList);
 
         return loreList;
     }
