@@ -6,6 +6,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.server.level.ServerPlayer;
 import online.pigeonshouse.gugugu.chat.MessageElement;
+import online.pigeonshouse.gugugu.utils.MinecraftUtil;
 
 public class MentionElement implements MessageElement {
     @Getter
@@ -24,7 +25,7 @@ public class MentionElement implements MessageElement {
                 .withStyle(style -> style
                         .withHoverEvent(new HoverEvent(
                                 HoverEvent.Action.SHOW_TEXT,
-                                Component.literal("提及玩家: " + mentionedPlayer.getName().getString())
+                                MinecraftUtil.translate("gugugu.chatEvent.components.mention.call", mentionedPlayer.getName().getString())
                         ))
                 );
     }

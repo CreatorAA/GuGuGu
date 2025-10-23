@@ -1,5 +1,6 @@
 package online.pigeonshouse.gugugu;
 
+import com.google.gson.Gson;
 import com.mojang.brigadier.CommandDispatcher;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -15,12 +16,20 @@ import online.pigeonshouse.gugugu.commands.TPFCommand;
 import online.pigeonshouse.gugugu.config.ModConfig;
 import online.pigeonshouse.gugugu.event.MinecraftServerEvents;
 import online.pigeonshouse.gugugu.fakeplayer.FakePlayerManager;
+import online.pigeonshouse.gugugu.fakeplayer.RIFakeServerPlayerFactory;
 import online.pigeonshouse.gugugu.fakeplayer.commands.RIFakePlayerCommands;
 import online.pigeonshouse.gugugu.fakeplayer.config.FakePlayerConfig;
 import online.pigeonshouse.gugugu.utils.TickScheduler;
+import online.pigeonshouse.gugugu.whitelist.WhitelistManage;
+import online.pigeonshouse.gugugu.whitelist.config.WhitelistConfig;
 
 import java.io.File;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.URL;
 import java.nio.file.Path;
+import java.util.Map;
+import java.util.Properties;
 
 @Slf4j
 public class GuGuGu implements ModInitializer {
@@ -30,6 +39,8 @@ public class GuGuGu implements ModInitializer {
     @Getter
     private FakePlayerConfig fakePlayerConfig;
     @Getter
+    private WhitelistConfig whitelistConfig;
+    @Getter
     private ModConfig config;
     @Getter
     private ChatEventHandler chatEventHandler;
@@ -37,13 +48,14 @@ public class GuGuGu implements ModInitializer {
     private FakePlayerManager fakePlayerManager;
     @Getter
     private BackupManager backupManager;
-
-    public GuGuGu() {
-        onInitialize();
-    }
+    @Getter
+    public MinecraftServer server;
+    @Getter
+    private Map<String, String> lang;
 
     public void onInitialize() {
         INSTANCE = this;
+        initLang();
 
         Path configDir = FabricLoader.getInstance().getConfigDir().resolve(MOD_ID);
         File configDirectory = configDir.toFile();
@@ -52,14 +64,19 @@ public class GuGuGu implements ModInitializer {
         }
 
         this.config = new ModConfig(configDir.resolve("config.json").toFile());
+        this.whitelistConfig = new WhitelistConfig(configDir.resolve("whitelist.json").toFile());
         this.fakePlayerConfig = new FakePlayerConfig(configDir.resolve("fakeplayer_config.json").toFile());
 
         config.load();
         fakePlayerConfig.load();
+        whitelistConfig.load();
 
         chatEventHandler = new ChatEventHandler();
         fakePlayerManager = new FakePlayerManager(fakePlayerConfig);
         backupManager = new BackupManager();
+
+        WhitelistManage.init();
+        RIFakeServerPlayerFactory.init();
 
         MinecraftServerEvents.SERVER_TICK.addCallback(TickScheduler::onServerTick);
         MinecraftServerEvents.COMMAND_REGISTER.addCallback(this::registerCommands);
@@ -89,15 +106,17 @@ public class GuGuGu implements ModInitializer {
     }
 
     private void setup(MinecraftServerEvents.ServerStartedEvent event) {
-        MinecraftServer server = event.getServer();
+        server = event.getServer();
         fakePlayerManager.loginPersisted(server);
         log.info("[GuGuGu] Setup!");
     }
 
     private void stopped(MinecraftServerEvents.ServerStoppedEvent event) {
+        server = null;
         fakePlayerManager.recordAndSave(event.getServer());
         config.save();
         fakePlayerConfig.save();
+        log.info("[GuGuGu] Stopped!");
     }
 
     public void runIfConfigTrue(String configName, Runnable runnable) {
@@ -106,5 +125,21 @@ public class GuGuGu implements ModInitializer {
         if (o instanceof Boolean bool && !bool) return;
 
         runnable.run();
+    }
+
+    private void initLang() {
+        URL resource = getClass().getClassLoader()
+                .getResource("assets/gugugu/lang/zh_cn.json");
+
+        if (resource == null) {
+            log.error("Failed to load language file!");
+            return;
+        }
+
+        try (InputStream stream = resource.openStream()) {
+            lang = new Gson().fromJson(new InputStreamReader(stream), Map.class);
+        } catch (Exception e) {
+            log.error("Failed to load language file!", e);
+        }
     }
 }

@@ -58,6 +58,13 @@ public class ModConfig {
     @Expose
     private boolean whiteListDisableUidCheck;
     /**
+     * 禁用UID检查时启用简单安全
+     */
+    @Getter
+    @Setter
+    @Expose
+    private boolean enableSimpleSecurity;
+    /**
      * 启用备份
      */
     @Getter
@@ -77,6 +84,7 @@ public class ModConfig {
             case "enableTeleport" -> enableTeleport;
             case "whiteListDisableUidCheck" -> whiteListDisableUidCheck;
             case "enableBackup" -> enableBackup;
+            case "enableSimpleSecurity" -> enableSimpleSecurity;
             default -> null;
         };
     }
@@ -96,6 +104,7 @@ public class ModConfig {
             disabledMessageHandlers = loaded.disabledMessageHandlers;
             enableTeleport = loaded.enableTeleport;
             whiteListDisableUidCheck = loaded.whiteListDisableUidCheck;
+            enableSimpleSecurity = loaded.enableSimpleSecurity;
             enableBackup = loaded.enableBackup;
 
             log.info("Configuration loaded successfully");
@@ -124,6 +133,7 @@ public class ModConfig {
         disabledMessageHandlers = List.of("teleport");
         enableTeleport = false;
         whiteListDisableUidCheck = false;
+        enableSimpleSecurity = true;
         enableBackup = false;
     }
 }

@@ -45,7 +45,7 @@ public class LevelWaypoint {
     public static LevelWaypoint xaeroParse(String input) {
         Matcher m = XAERO_WAYPOINT_PATTERN.matcher(input);
         if (!m.matches()) {
-            throw new IllegalArgumentException("输入不符合 Xaero waypoint 格式: " + input);
+            throw new IllegalArgumentException("Input does not match Xaero waypoint format: " + input);
         }
 
         String name = m.group("name");
@@ -79,7 +79,7 @@ public class LevelWaypoint {
     public static LevelWaypoint journeyMapParse(String input) {
         Matcher m = JOURNEY_MAP_PATTERN.matcher(input);
         if (!m.matches()) {
-            throw new IllegalArgumentException("输入不符合 JourneyMap waypoint 格式: " + input);
+            throw new IllegalArgumentException("Input does not match Xaero waypoint format: " + input);
         }
         String name = m.group("name");
         int x = Integer.parseInt(m.group("x"));
