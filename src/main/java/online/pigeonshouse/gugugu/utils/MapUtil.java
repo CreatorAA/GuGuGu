@@ -1,0 +1,185 @@
+package online.pigeonshouse.gugugu.utils;
+
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.datafix.DataFixTypes;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.chunk.ChunkAccess;
+import net.minecraft.world.level.chunk.ChunkStatus;
+import net.minecraft.world.level.chunk.storage.*;
+import net.minecraft.world.level.entity.EntityPersistentStorage;
+
+import java.io.IOException;
+import java.lang.reflect.Field;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
+
+public class MapUtil {
+    private static final Pattern REGION_FILE_PATTERN = Pattern.compile("r\\.(-?\\d+)\\.(-?\\d+)\\.mca");
+
+    public static Optional<ChunkAccess> getChunk(Level level, int x, int z) {
+        ChunkAccess chunk = level.getChunk(x, z, ChunkStatus.FULL, false);
+        return Optional.ofNullable(chunk);
+    }
+
+    public static RegionFileStorage getStorage(IOWorker worker) {
+        StorageGetter storageGetter = storageGetter(worker);
+        if (storageGetter.getStorage() == null) {
+            try {
+                Class<?> clazz = Class.forName("com.ishland.c2me.rewrites.chunkio.common.C2MEStorageVanillaInterface");
+                Field backendField = clazz.getDeclaredField("backend");
+                backendField.setAccessible(true);
+                Object backend = backendField.get(worker);
+                Field storageField = backend.getClass().getDeclaredField("storage");
+                storageField.setAccessible(true);
+                return (RegionFileStorage) storageField.get(backend);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return storageGetter.getStorage();
+    }
+
+    public static Class<?> checkC2ME() {
+        try {
+            return Class.forName("com.ishland.c2me.rewrites.chunkio.common.C2MEStorageVanillaInterface");
+        } catch (ClassNotFoundException e) {
+            return null;
+        }
+    }
+
+    public static Path getRegionFileStorageFolder(IOWorker worker) {
+        return getRegionFileStorageFolder(getStorage(worker));
+    }
+
+    public static Path getRegionFileStorageFolder(RegionFileStorage storage) {
+        return pathGetter(storage).getPath();
+    }
+
+    public static StorageGetter storageGetter(Object object) {
+        return (StorageGetter) object;
+    }
+
+    public static PathGetter pathGetter(Object object) {
+        return (PathGetter) object;
+    }
+
+    public static Map<String, List<ChunkPos>> parseRegionFiles(Path regionDir) throws IOException {
+        Map<String, List<ChunkPos>> result = new ConcurrentHashMap<>();
+        ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+
+        try (Stream<Path> files = Files.list(regionDir)) {
+            List<Future<?>> futures = files
+                    .filter(path -> REGION_FILE_PATTERN.matcher(path.getFileName().toString()).matches())
+                    .map(path -> executor.submit(() -> {
+                        List<ChunkPos> chunkPositions = parseRegionFile(path);
+                        result.put(path.getFileName().toString(), chunkPositions);
+                    }))
+                    .collect(Collectors.toList());
+
+            for (Future<?> future : futures) {
+                try {
+                    future.get();
+                } catch (InterruptedException | ExecutionException e) {
+                    // Handle exceptions appropriately
+                    e.printStackTrace();
+                }
+            }
+        } finally {
+            executor.shutdown();
+        }
+
+        return result;
+    }
+
+    public static List<ChunkPos> parseRegionFile(Path mcFile) {
+        String fileName = mcFile.getFileName().toString();
+        Matcher matcher = REGION_FILE_PATTERN.matcher(fileName);
+        if (matcher.matches()) {
+            int regionX = Integer.parseInt(matcher.group(1));
+            int regionZ = Integer.parseInt(matcher.group(2));
+            List<ChunkPos> chunkPositions = new ArrayList<>();
+            for (int x = 0; x < 32; x++) {
+                for (int z = 0; z < 32; z++) {
+                    int chunkX = (regionX << 5) + x;
+                    int chunkZ = (regionZ << 5) + z;
+                    chunkPositions.add(new ChunkPos(chunkX, chunkZ));
+                }
+            }
+            return chunkPositions;
+        }
+
+        return null;
+    }
+
+    public static RegionFileStorage createRegionFileStorage(RegionFileStorage parent) {
+        return new RegionFileStorage(getRegionFileStorageFolder(parent), false);
+    }
+
+    public static List<RegionFileStorage> createRegionFileStorages(RegionFileStorage parent, int numberOfStorages) {
+        return IntStream.range(0, numberOfStorages)
+                .mapToObj(i -> createRegionFileStorage(parent))
+                .collect(Collectors.toList());
+    }
+
+    public static Path getLevelDir(ServerLevel level) {
+        IOWorker worker = (IOWorker) level.getChunkSource().chunkScanner();
+        return getRegionFileStorageFolder(worker);
+    }
+
+    public static Path getWorldPath(ChunkScanAccess scanAccess) {
+        IOWorker worker = (IOWorker) scanAccess;
+        return getRegionFileStorageFolder(worker).toAbsolutePath().getParent();
+    }
+
+    public static Path getWorldPath(ServerLevel level) {
+        return getWorldPath(level.getChunkSource().chunkScanner());
+    }
+
+    public static Path getSavePath() {
+        ServerLevel overworld = MinecraftUtil.getServer().overworld();
+        return getWorldPath(overworld);
+    }
+
+    public static String getSaveName() {
+        return getSavePath().getFileName().toString();
+    }
+
+    public static Path getEntitiesDir() {
+        return getSavePath().resolve("entities");
+    }
+
+    public static EntityPersistentStorage<Entity> createEntityPersistentStorage(ServerLevel level, Path levelDir) {
+        MinecraftServer server = level.getServer();
+//        return new EntityStorage(
+//                new SimpleRegionStorage(
+//                        new RegionStorageInfo(getSaveName(), level.dimension(), "entities"),
+//                        levelDir.resolve("entities"),
+//                        server.getFixerUpper(),
+//                        server.forceSynchronousWrites(),
+//                        DataFixTypes.ENTITY_CHUNK
+//                ),
+//                level,
+//                server
+//        );
+        return new EntityStorage(
+                level,
+                levelDir.resolve("entities"),
+                server.getFixerUpper(),
+                server.forceSynchronousWrites(),
+                server
+        );
+    }
+}

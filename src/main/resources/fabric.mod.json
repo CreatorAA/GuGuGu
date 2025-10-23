@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "id": "gugugu",
+  "version": "${version}",
+  "name": "GuGuGu-fabric-1.20.1-0.1.0.2",
+  "description": "",
+  "authors": [],
+  "contact": {},
+  "license": "All-Rights-Reserved",
+  "entrypoints": {
+    "main": [
+      "online.pigeonshouse.gugugu.GuGuGu"
+    ]
+  },
+  "mixins": [
+    "gugugu.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.17",
+    "minecraft": "${minecraft_version}"
+  },
+  "accessWidener": "gugugu.accesswidener"
+}
