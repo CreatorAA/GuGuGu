@@ -6,10 +6,7 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
-import online.pigeonshouse.gugugu.GuGuGu;
-import online.pigeonshouse.gugugu.fakeplayer.PlayerInventoryViewer;
-import online.pigeonshouse.gugugu.fakeplayer.RIFakeServerPlayer;
-import online.pigeonshouse.gugugu.fakeplayer.config.FakePlayerConfig;
+import online.pigeonshouse.gugugu.event.MinecraftServerEvents;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -17,21 +14,15 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(Entity.class)
 public class EntityMixin {
-    @Inject(method = "interactAt", at = @At("HEAD"))
+    @Inject(method = "interactAt", at = @At("HEAD"), cancellable = true)
     private void interactAt(Player player, Vec3 vec3, InteractionHand hand, CallbackInfoReturnable<InteractionResult> cir) {
         Entity entity = (Entity) (Object) this;
-        FakePlayerConfig fakePlayerConfig = GuGuGu.getINSTANCE().getFakePlayerConfig();
 
-        if (player instanceof ServerPlayer serverPlayer && entity instanceof RIFakeServerPlayer fakeServerPlayer
-                && player.getItemInHand(hand).isEmpty()) {
-            if (serverPlayer.hasPermissions(4)) {
-                PlayerInventoryViewer.openFor(serverPlayer, fakeServerPlayer, true);
-                return;
-            }
-
-            if (fakePlayerConfig.isAllowOpenInventory()) {
-                PlayerInventoryViewer.openFor(serverPlayer, fakeServerPlayer,
-                        fakePlayerConfig.isAllowInventoryInteraction());
+        if (player instanceof ServerPlayer player1) {
+            MinecraftServerEvents.PlayerUseEntityEvent useEntityEvent = new MinecraftServerEvents.PlayerUseEntityEvent(player1, entity, hand);
+            MinecraftServerEvents.PLAYER_USE_ENTITY.dispatch(useEntityEvent);
+            if (useEntityEvent.getResult() != null) {
+                cir.setReturnValue(useEntityEvent.getResult());
             }
         }
     }

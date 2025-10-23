@@ -106,7 +106,7 @@ public class WorldManage {
     public static RegionCoords parseRegionName(String name) {
         Matcher m = REGION_NAME_PATTERN.matcher(name);
         if (!m.matches()) {
-            throw new IllegalArgumentException("无效的区域文件名: " + name);
+            throw new IllegalArgumentException("Region file name is invalid: " + name);
         }
         int x = Integer.parseInt(m.group("x"));
         int z = Integer.parseInt(m.group("z"));

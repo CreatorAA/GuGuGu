@@ -6,6 +6,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import online.pigeonshouse.gugugu.chat.MessageContext;
 import online.pigeonshouse.gugugu.chat.MessageProcessor;
+import online.pigeonshouse.gugugu.utils.MinecraftUtil;
 
 import java.util.Set;
 
@@ -21,8 +22,8 @@ public class MentionNotifier implements MessageProcessor {
         mentioned.remove(context.getSender());
 
         Component notification = Component.literal(context.getSender().getName().getString())
-                .append(Component.literal(" 提及了你！")
-                        .withStyle(ChatFormatting.GOLD));
+                .append(" ")
+                .append(MinecraftUtil.translate("chat.gugugu.mention"));
 
         mentioned.forEach(player -> {
                     player.sendSystemMessage(notification, true);

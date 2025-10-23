@@ -1,6 +1,7 @@
 package online.pigeonshouse.gugugu.fakeplayer;
 
 import com.mojang.authlib.GameProfile;
+import lombok.extern.slf4j.Slf4j;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.PacketFlow;
@@ -9,15 +10,27 @@ import net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ClientInformation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.CommonListenerCookie;
 import net.minecraft.server.players.GameProfileCache;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.entity.SkullBlockEntity;
+import online.pigeonshouse.gugugu.GuGuGu;
+import online.pigeonshouse.gugugu.event.MinecraftServerEvents;
+import online.pigeonshouse.gugugu.fakeplayer.config.FakePlayerConfig;
+import online.pigeonshouse.gugugu.utils.MinecraftUtil;
 
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
+@Slf4j
 public class RIFakeServerPlayerFactory {
+    public static void init() {
+        MinecraftServerEvents.PLAYER_USE_ENTITY.addCallback(RIFakeServerPlayerFactory::onPlayerUseEntity);
+    }
+
     public static CompletableFuture<RIFakeServerPlayer> createFakeServerPlayer(
             MinecraftServer server, String playerName, ServerLevel serverLevel, GameType gameMode,
             double x, double y, double z, float yaw, float pitch
@@ -61,11 +74,20 @@ public class RIFakeServerPlayerFactory {
         Connection fakeConnection = RIFakeServerPlayer.createFakeConnection(PacketFlow.SERVERBOUND);
         ClientInformation clientInformation = player.clientInformation();
         CommonListenerCookie listenerCookie = new CommonListenerCookie(gameProfile, 0, clientInformation, false);
+
         try {
             GameProfileCache.setUsesAuthentication(false);
             server.executeBlocking(() -> server.getPlayerList().placeNewPlayer(fakeConnection, player, listenerCookie));
         } finally {
             GameProfileCache.setUsesAuthentication(server.isDedicatedServer() && server.usesAuthentication());
+
+            if (GuGuGu.INSTANCE.getFakePlayerConfig().isAllowFakeServerGamePacketListenerImpl() && MinecraftUtil.findCarpetMod()) {
+                FakePlayerConfig fakePlayerConfig = GuGuGu.INSTANCE.getFakePlayerConfig();
+                fakePlayerConfig.setAllowFakeServerGamePacketListenerImpl(false);
+
+                CompletableFuture.runAsync(fakePlayerConfig::save);
+                log.error("Server detected Carpet Mod, option allowFakeServerGamePacketListenerImpl is invalid, reset to default value");
+            }
         }
 
         player.unsetRemoved();
@@ -79,5 +101,26 @@ public class RIFakeServerPlayerFactory {
 
         player.teleportTo(serverLevel, x, y, z, Set.of(), yaw, pitch);
         return player;
+    }
+
+    public static void onPlayerUseEntity(MinecraftServerEvents.PlayerUseEntityEvent event) {
+        FakePlayerConfig fakePlayerConfig = GuGuGu.getINSTANCE().getFakePlayerConfig();
+
+        ServerPlayer serverPlayer = event.getPlayer();
+        Entity entity = event.getEntity();
+        InteractionHand hand = event.getHand();
+
+        if (entity instanceof RIFakeServerPlayer fakeServerPlayer
+                && serverPlayer.getItemInHand(hand).isEmpty()) {
+            if (serverPlayer.hasPermissions(4)) {
+                PlayerInventoryViewer.openFor(serverPlayer, fakeServerPlayer, true);
+                return;
+            }
+
+            if (fakePlayerConfig.isAllowOpenInventory()) {
+                PlayerInventoryViewer.openFor(serverPlayer, fakeServerPlayer,
+                        fakePlayerConfig.isAllowInventoryInteraction());
+            }
+        }
     }
 }

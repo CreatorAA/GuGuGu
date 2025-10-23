@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "gugugu",
   "version": "${version}",
-  "name": "GuGuGu-fabric-1.21.1-0.1.0.2",
+  "name": "GuGuGu-fabric-1.21.1-0.2.2.3",
   "description": "",
   "authors": [],
   "contact": {},
@@ -16,8 +16,8 @@
     "gugugu.mixins.json"
   ],
   "depends": {
-    "fabricloader": ">=${loader_version}",
-    "minecraft": "${minecraft_version}"
+    "fabricloader": ">=0.17",
+    "minecraft": ">=1.21- <=1.21.1"
   },
   "accessWidener": "gugugu.accesswidener"
 }
