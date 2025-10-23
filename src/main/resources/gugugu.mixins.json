@@ -13,7 +13,10 @@
     "PlayerListMixin",
     "RegionFileStorageMixin",
     "ServerGamePacketListenerImplMixin",
-    "UserWhiteListFixMixin"
+    "ServerLoginPacketListenerImplMixin",
+    "StoredUserEntryMixin",
+    "UserWhiteListFixMixin",
+    "WhitelistCommandMixin"
   ],
   "client": [
   ],
