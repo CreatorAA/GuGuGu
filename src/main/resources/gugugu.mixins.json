@@ -12,8 +12,11 @@
     "MinecraftServerMixin",
     "PlayerListMixin",
     "RegionFileStorageMixin",
+    "ServerConfigurationPacketListenerImplMixin",
     "ServerGamePacketListenerImplMixin",
-    "UserWhiteListFixMixin"
+    "StoredUserEntryMixin",
+    "UserWhiteListFixMixin",
+    "WhitelistCommandMixin"
   ],
   "client": [
   ],

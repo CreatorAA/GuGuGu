@@ -1,8 +1,10 @@
 # GuGuGu Mod
 
-（0.1.0.1）版本规则：发生结构性变化的版本号.额外功能增删的版本号.发生方法/类变动的版本号.小修改的版本号
+`(0.1.0.1)`版本规则：发生结构性变化的版本号.额外功能增删的版本号.发生方法/类变动的版本号.小修改的版本号
 
-本MOD为多人游戏服务器提供多样化的辅助工具，显著改善玩家游戏体验，同时允许服务器管理员灵活地控制和配置相关功能。
+本MOD为游戏提供多样化的辅助工具，显著改善玩家游戏体验，同时允许服务器管理员灵活地控制和配置相关功能。
+
+截止至`(0.2.*)`我们提供的功能：`假人玩家`、`行为控制`、`备份`、`热回档`、`聊天消息组件`、`服务器状态查询`、`白名单禁用uuid检查`、`白名单禁用检查后的安全管理`等多种功能。
 
 ---
 
@@ -10,7 +12,26 @@
 
 ### 一、假人玩家功能（FakePlayer）
 
-基于知名的 Carpet MOD 的假人功能，并修复了原版存在的内存溢出、协议缺失等导致无法进入部分 mod 服务器的问题。
+参考知名Mod Carpet 开发设计的假人功能，提供真实玩家的一系列功能。
+
+#### 配置文件介绍
+
+配置文件位置：`config/gugugu/fakeplayer_config.json`
+
+```json
+
+{
+  "commandLevel": 0,                                // 命令执行需要的权限级别
+  "allowOpenInventory": true,                       // 是否允许玩家右键打开假人背包
+  "allowInventoryInteraction": true,                // 是否允许非管理员与FakePlayer的背包的物品互动
+  "fakePlayerNamePrefix": "",                       // FakePlayer玩家名称前缀、后缀
+  "fakePlayerNameSuffix": "",
+  "persisted": [],                                  // 持久化假人位置信息，无需修改
+  "autoLoginNames": [],                             // 当服务器重启或进入存档后，需要自动进入游戏的假人名称列表
+  "allowFakeServerGamePacketListenerImpl": true     // 是否允许屏蔽forge/neoforge事件系统对假人进入游戏时的感知（设置false可能导致在部分情况下，提示假人缺少指定mod所以拒绝进入服务器）
+}
+
+```
 
 #### 假人指令详解（`/rifakeplayer` 或 `/fp`）
 
@@ -23,17 +44,11 @@
   /fp create 玩家名 x y z in dimension
   ```
 
-* **杀死假人**
+* **打开假人背包（此子命令只支持管理员权限的玩家执行）**
 
   ```
-  /fp kill 玩家名
-  ```
-
-* **打开假人背包**（需要权限等级4）
-
-  ```
-  /fp open 假人名 [true|false]
-  /fp open 假人名 viewer 玩家名 [true|false]
+  /fp open 假人名 [true|false]                    // true为允许玩家与假人背包互动，false为不允许
+  /fp open 假人名 viewer 玩家名 [true|false]       // viewer为某个玩家打开指定假人的背包视图
   ```
 
 * **自动登录设置**
@@ -47,19 +62,8 @@
 * **控制假人动作**
 
   ```
-  /fp control 假人名 [use|attack|jump|drop|stopAll] [interval|continue]
+  /fp control 假人名 [use|attack|jump|drop|stopAll|kill] [interval|continue]          // 不同动作可以组合使用
   ```
-
-#### 假人配置说明
-
-配置文件位置：`config/gugugu/fakeplayer_config.json`
-
-* 权限等级（`commandLevel`）
-* 是否允许打开假人背包（`allowOpenInventory`）
-* 是否允许非管理员与假人互动（`allowInventoryInteraction`）
-* 是否无视NetworkRegistry.checkPacket对假人的检查（`allowFakeServerGamePacketListenerImpl`）
-* 假人名称前后缀设置
-* 假人自动登录列表
 
 ---
 
@@ -138,6 +142,20 @@
 
 ---
 
+### 六、禁用白名单uuid检查后的简易安全检查
+
+众所周知，Minecraft的离线服务器生成白名单时总是会造成错误的UUID生成，而我们的`whiteListDisableUidCheck`选项就可以做到对进入服务器的玩家只进行名称匹配的功能。
+
+但是禁用了UUID检查就无异于是掩耳盗铃，别人直接就拿着其他人的账号就进服务器了，为此我们提供了额外的选项，即默认启用的简易安全检查`enableSimpleSecurity`。
+
+安全检查的作用是防止有人浑水摸鱼，恶意破坏服务器安全，以下是触发安全检查的情况：
+
+假设我们添加了一个白名单`[玩家：a, uuid：123]`, 但是玩家`a`的真实`uuid`不是`123`，那么玩家`a`虽然仍能正常进入服务器，但是会要求进行`二次验证`，必须在聊天栏输入正确的`白名单内的对应名称相同玩家的uuid`进行绑定，否则无法正常游玩。
+
+绑定之后，会将两个玩家视为一人，使用白名单内玩家的数据作为主要游戏数据。
+
+---
+
 ## 核心配置总览
 
 位置：`config/gugugu/config.json`
@@ -147,3 +165,4 @@
 * 玩家传送功能开关（`enableTeleport`）
 * 备份功能开关（`enableBackup`）
 * 白名单UID检查禁用开关（`whiteListDisableUidCheck`）
+* 白名单UID检查禁用后，玩家进入游戏时的二次验证开关（`enableSimpleSecurity`）
