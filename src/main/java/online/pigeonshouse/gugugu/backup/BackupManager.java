@@ -97,7 +97,7 @@ public class BackupManager {
                 scheduleAutoBackup();
             }
         } catch (Exception ex) {
-            throw new RuntimeException("备份系统初始化失败", ex);
+            throw new RuntimeException("Backup system initialization failed", ex);
         }
     }
 
@@ -149,13 +149,13 @@ public class BackupManager {
         try (Writer w = Files.newBufferedWriter(regionsConfig)) {
             BackupConfig.GSON.toJson(regionHashMap, w);
         } catch (IOException e) {
-            log.error("写入 regions.json 失败", e);
+            log.error("Failed to write regions.json", e);
         }
 
         try (Writer w = Files.newBufferedWriter(entitiesConfig)) {
             BackupConfig.GSON.toJson(entityHashMap, w);
         } catch (IOException e) {
-            log.error("写入 entities.json 失败", e);
+            log.error("Failed to write entities.json", e);
         }
     }
 
@@ -177,13 +177,6 @@ public class BackupManager {
         String ts = TS_FMT.format(Instant.now());
         Path target = fullRoot.resolve(ts);
         log.info("Full backup: {}, at {}", reason, target);
-
-        // C2ME 兼容性修复
-//        return CompletableFuture.supplyAsync(() -> {
-//            Path target1 = createFullBackup(target);
-//            log.info("Full backup: {}, at {}", reason, target1);
-//            return target1;
-//        });
 
         Supplier<Path> task = () -> {
             Path target1 = createFullBackup(target);
@@ -481,7 +474,7 @@ public class BackupManager {
                 String regionFileName = WorldManage.getRegionFileName(pos);
 
                 if (!Files.exists(dir.resolve(regionFileName))) {
-                    throw new IOException("缺少 region 文件: " + regionFileName);
+                    throw new RuntimeException("Region file not found: " + regionFileName);
                 }
                 query.computeIfAbsent(regionFileName, k -> new ArrayList<>()).add(pos);
             }
@@ -502,7 +495,7 @@ public class BackupManager {
             Map<String, List<ReadRegionExecutorService.ScanResult>> scanMap = svc.scanRegion(query);
             return new WorldManage(level, scanMap);
         } catch (Exception e) {
-            throw new RuntimeException("扫描备份 region 文件失败", e);
+            throw new RuntimeException("Scan backup region file failed", e);
         } finally {
             backupStorage.close();
         }
@@ -518,9 +511,7 @@ public class BackupManager {
         long period = Math.max(1, config.getAutoBackupMinutes());
         autoBackupFuture = scheduler.scheduleAtFixedRate(() -> {
             try {
-                server.getPlayerList().broadcastSystemMessage(Component.literal("[GBackup] ")
-                                .withStyle(ChatFormatting.GOLD)
-                                .append("自动备份任务开始..."),
+                server.getPlayerList().broadcastSystemMessage(MinecraftUtil.translate("gugugu.backup.autoBackup.start"),
                         false);
 
                 MinecraftUtil.getServer().saveEverything(true, true, false);
@@ -530,21 +521,17 @@ public class BackupManager {
                 }
 
                 backupFull("Auto full backup")
-                        .thenRun(() -> server.getPlayerList().broadcastSystemMessage(Component.literal("[GBackup] ")
-                                .withStyle(ChatFormatting.GOLD)
-                                .append("自动备份任务完成")
-                                .withStyle(ChatFormatting.GREEN), false)
-                        )
+                        .thenRun(() -> server.getPlayerList().broadcastSystemMessage(MinecraftUtil.translate("gugugu.backup.autoBackup.finish"), false))
                         .exceptionally(t -> {
-                            log.error("自动全量备份失败", t);
+                            log.error("Auto full backup failed", t);
                             return null;
                         });
             } catch (Exception ex) {
-                log.error("自动备份任务执行异常", ex);
+                log.error("Auto backup task execution exception", ex);
             }
         }, period, period, TimeUnit.MINUTES);
 
-        log.info("GBackup: 自动备份已启用，每 {} 分钟执行一次。", period);
+        log.info("GBackup: Auto backup is enabled, will execute every {} minutes.", period);
     }
 
     private record BackupHotSource(Path backupDir, Path levelDir, boolean isClean) {

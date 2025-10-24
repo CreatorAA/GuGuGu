@@ -49,8 +49,8 @@ public class PlayerInventoryViewer extends SimpleContainer {
     }
 
     private static ItemStack buildGrayGlass() {
-        return MinecraftUtil.setHoverName(Items.GRAY_STAINED_GLASS_PANE.getDefaultInstance(), Component.literal("填充物")
-                .withStyle(Style.EMPTY.withColor(ChatFormatting.WHITE)));
+        return MinecraftUtil.setHoverName(Items.GRAY_STAINED_GLASS_PANE.getDefaultInstance(),
+                MinecraftUtil.translate("gugugu.inventory_viewer.glass.filler"));
     }
 
     EventCallback<MinecraftServerEvents.ServerTickEvent> eventCallback = this::updateContainer;
@@ -60,13 +60,13 @@ public class PlayerInventoryViewer extends SimpleContainer {
     }
 
     private static ItemStack buildYellowGlass() {
-        return MinecraftUtil.setHoverName(Items.YELLOW_STAINED_GLASS_PANE.getDefaultInstance(), Component.literal("当前栏位")
-                .withStyle(Style.EMPTY.withColor(ChatFormatting.GOLD)));
+        return MinecraftUtil.setHoverName(Items.YELLOW_STAINED_GLASS_PANE.getDefaultInstance(),
+                MinecraftUtil.translate("gugugu.inventory_viewer.glass.current_slot"));
     }
 
     private static ItemStack buildCloseGlass() {
-        return MinecraftUtil.setHoverName(Items.RED_STAINED_GLASS_PANE.getDefaultInstance(), Component.literal("关闭菜单")
-                .withStyle(Style.EMPTY.withColor(ChatFormatting.RED)));
+        return MinecraftUtil.setHoverName(Items.RED_STAINED_GLASS_PANE.getDefaultInstance(),
+                MinecraftUtil.translate("gugugu.inventory_viewer.glass.close"));
     }
 
     private static ItemStack[] buildMainHandGlass(int mainHand) {
@@ -75,8 +75,11 @@ public class PlayerInventoryViewer extends SimpleContainer {
             if (i == mainHand) {
                 itemStacks[i] = buildYellowGlass();
             } else {
-                itemStacks[i] = MinecraftUtil.setHoverName(buildWhiteGlass(), Component.literal("点击切换至" + (i + 1) + "号栏位")
-                        .withStyle(Style.EMPTY.withColor(ChatFormatting.GRAY)));
+                Component slotNumber = Component.literal(String.valueOf(i + 1)).withStyle(ChatFormatting.GOLD);
+                Component hoverText = MinecraftUtil.translate("gugugu.inventory_viewer.glass.switch_to_slot")
+                        .append(slotNumber)
+                        .append(MinecraftUtil.translate("gugugu.inventory_viewer.glass.slot_suffix"));
+                itemStacks[i] = MinecraftUtil.setHoverName(buildWhiteGlass(), hoverText);
             }
         }
         return itemStacks;
@@ -142,49 +145,54 @@ public class PlayerInventoryViewer extends SimpleContainer {
 
         ItemStack instance = Items.OAK_SIGN.getDefaultInstance();
 
-        MinecraftUtil.addLore(instance, Component.literal("玩家名称: ")
-                        .withStyle(Style.EMPTY.withColor(ChatFormatting.BLUE))
-                        .append(Component.literal(target.getName().getString())
-                                .withStyle(Style.EMPTY.withColor(ChatFormatting.GOLD))),
-                Component.literal("玩家UID: ")
-                        .withStyle(Style.EMPTY.withColor(ChatFormatting.BLUE))
-                        .append(Component.literal(target.getUUID().toString())
-                                .withStyle(Style.EMPTY.withColor(ChatFormatting.GOLD))),
-                Component.literal("生命值: ")
-                        .withStyle(Style.EMPTY.withColor(ChatFormatting.BLUE))
-                        .append(Component.literal(String.valueOf(target.getHealth()))
-                                .withStyle(Style.EMPTY.withColor(ChatFormatting.GREEN))
-                                .append(Component.literal(" / ")
-                                        .withStyle(Style.EMPTY.withColor(ChatFormatting.WHITE))
-                                        .append(Component.literal(String.valueOf(target.getMaxHealth()))
-                                                .withStyle(Style.EMPTY.withColor(ChatFormatting.GOLD))))),
-                Component.literal("饥饿值: ")
-                        .withStyle(Style.EMPTY.withColor(ChatFormatting.BLUE))
-                        .append(Component.literal(String.valueOf(foodData.getFoodLevel()))
-                                .withStyle(Style.EMPTY.withColor(ChatFormatting.GREEN))
-                                .append(Component.literal(" / ")
-                                        .withStyle(Style.EMPTY.withColor(ChatFormatting.WHITE))
-                                        .append(Component.literal(String.valueOf(20))
-                                                .withStyle(Style.EMPTY.withColor(ChatFormatting.GOLD))))),
-                Component.literal("饱腹度: ")
-                        .withStyle(Style.EMPTY.withColor(ChatFormatting.BLUE))
-                        .append(Component.literal(String.valueOf(foodData.getSaturationLevel()))
-                                .withStyle(Style.EMPTY.withColor(ChatFormatting.GREEN))),
-                Component.literal("经验值: ")
-                        .withStyle(Style.EMPTY.withColor(ChatFormatting.BLUE))
-                        .append(Component.literal(String.valueOf(target.experienceLevel))
-                                .withStyle(Style.EMPTY.withColor(ChatFormatting.GREEN))
-                                .append(Component.literal(" (")
-                                        .withStyle(Style.EMPTY.withColor(ChatFormatting.WHITE))
-                                        .append(Component.literal(experienceProgress + "%")
-                                                .withStyle(Style.EMPTY.withColor(ChatFormatting.GRAY)))
-                                        .append(Component.literal(")"))
-                                        .withStyle(Style.EMPTY.withColor(ChatFormatting.WHITE))))
+        MinecraftUtil.addLore(instance,
+                buildPlayerNameLine(target.getName().getString()),
+                buildPlayerUidLine(target.getUUID().toString()),
+                buildHealthLine(target.getHealth(), target.getMaxHealth()),
+                buildFoodLine(foodData.getFoodLevel()),
+                buildSaturationLine(foodData.getSaturationLevel()),
+                buildExperienceLine(target.experienceLevel, experienceProgress)
         );
 
+        return MinecraftUtil.setHoverName(instance,
+                MinecraftUtil.translate("gugugu.inventory_viewer.info.title"));
+    }
 
-        return MinecraftUtil.setHoverName(instance, Component.literal("玩家信息")
-                .withStyle(Style.EMPTY.withColor(ChatFormatting.GOLD)));
+    private Component buildPlayerNameLine(String playerName) {
+        return MinecraftUtil.translate("gugugu.inventory_viewer.info.player_name_prefix")
+                .append(Component.literal(playerName).withStyle(ChatFormatting.GOLD));
+    }
+
+    private Component buildPlayerUidLine(String playerUid) {
+        return MinecraftUtil.translate("gugugu.inventory_viewer.info.player_uid_prefix")
+                .append(Component.literal(playerUid).withStyle(ChatFormatting.GOLD));
+    }
+
+    private Component buildHealthLine(float health, float maxHealth) {
+        return MinecraftUtil.translate("gugugu.inventory_viewer.info.health_prefix")
+                .append(Component.literal(String.valueOf(health)).withStyle(ChatFormatting.GREEN))
+                .append(MinecraftUtil.translate("gugugu.inventory_viewer.info.health_separator"))
+                .append(Component.literal(String.valueOf(maxHealth)).withStyle(ChatFormatting.GOLD));
+    }
+
+    private Component buildFoodLine(int foodLevel) {
+        return MinecraftUtil.translate("gugugu.inventory_viewer.info.food_prefix")
+                .append(Component.literal(String.valueOf(foodLevel)).withStyle(ChatFormatting.GREEN))
+                .append(MinecraftUtil.translate("gugugu.inventory_viewer.info.food_separator"))
+                .append(Component.literal("20").withStyle(ChatFormatting.GOLD));
+    }
+
+    private Component buildSaturationLine(float saturation) {
+        return MinecraftUtil.translate("gugugu.inventory_viewer.info.saturation_prefix")
+                .append(Component.literal(String.valueOf(saturation)).withStyle(ChatFormatting.GREEN));
+    }
+
+    private Component buildExperienceLine(int level, float progress) {
+        return MinecraftUtil.translate("gugugu.inventory_viewer.info.experience_prefix")
+                .append(Component.literal(String.valueOf(level)).withStyle(ChatFormatting.GREEN))
+                .append(MinecraftUtil.translate("gugugu.inventory_viewer.info.experience_middle"))
+                .append(Component.literal(progress + "%").withStyle(ChatFormatting.GRAY))
+                .append(MinecraftUtil.translate("gugugu.inventory_viewer.info.experience_suffix"));
     }
 
     private void handleClick(int i) {

@@ -21,6 +21,7 @@ import online.pigeonshouse.gugugu.config.ModConfig;
 import online.pigeonshouse.gugugu.event.MinecraftServerEvents;
 import online.pigeonshouse.gugugu.utils.ObjectGetter;
 import online.pigeonshouse.gugugu.utils.TickScheduler;
+import online.pigeonshouse.gugugu.utils.MinecraftUtil;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -39,14 +40,12 @@ public class WhitelistManage {
 
     private static final Set<GameProfile> monitorList = new HashSet<>();
 
-
     private static void onCreatePlayer(MinecraftServerEvents.PlayerCreateEvent event) {
         if (!checkEnable()) return;
 
         PlayerList playerList = event.getServer().getPlayerList();
 
-        UserWhiteList whiteList = playerList
-                .getWhiteList();
+        UserWhiteList whiteList = playerList.getWhiteList();
 
         List<GameProfile> findList = new ArrayList<>();
 
@@ -95,20 +94,21 @@ public class WhitelistManage {
         if (!checkEnable()) return;
         ServerPlayer player = event.getPlayer();
 
-        MutableComponent message = Component.literal("当前身份UUID：")
+        MutableComponent uuidComponent = Component.literal(player.getGameProfile().getId().toString())
+                .withStyle(ChatFormatting.GOLD)
+                .withStyle(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD,
+                        player.getGameProfile().getId().toString())))
+                .withStyle(style -> style.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                        MinecraftUtil.translate("gugugu.whitelist.uuid_copy_hover"))));
+
+        MutableComponent message = MinecraftUtil.translate("gugugu.whitelist.current_uuid")
                 .withStyle(ChatFormatting.YELLOW)
-                .append(Component.literal(player.getGameProfile().getId().toString())
-                        .withStyle(ChatFormatting.GOLD)
-                        .withStyle(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD,
-                                player.getGameProfile().getId().toString())))
-                        .withStyle(style -> style.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-                                Component.literal("点击复制"))))
-                );
+                .append(uuidComponent);
 
         player.sendSystemMessage(message);
 
         if (monitorList.contains(player.getGameProfile())) {
-            player.sendSystemMessage(Component.literal("请输入您白名单对应的UUID以验证身份！")
+            player.sendSystemMessage(MinecraftUtil.translate("gugugu.whitelist.enter_uuid_prompt")
                     .withStyle(ChatFormatting.YELLOW));
         }
     }
@@ -121,7 +121,7 @@ public class WhitelistManage {
         for (GameProfile gameProfile : new CopyOnWriteArrayList<>(monitorList)) {
             if (server.getPlayerList().getPlayer(gameProfile.getId()) == null) {
                 monitorList.remove(gameProfile);
-            }else {
+            } else {
                 server.getPlayerList().getPlayer(gameProfile.getId())
                         .teleportTo(level, spawnPos.getX(), spawnPos.getY(), spawnPos.getZ(), 0, 0);
             }
@@ -150,18 +150,18 @@ public class WhitelistManage {
             }
 
             if (temp == null) {
-                MutableComponent literal = Component.literal("UUID验证失败：")
+                MutableComponent uuidText = Component.literal(string).withStyle(ChatFormatting.GOLD);
+                MutableComponent literal = MinecraftUtil.translate("gugugu.whitelist.uuid_verification_failed")
                         .withStyle(ChatFormatting.RED)
-                        .append(Component.literal(string)
-                                .withStyle(ChatFormatting.GOLD));
+                        .append(uuidText);
 
                 player.connection.send(new ClientboundDisconnectPacket(literal));
                 player.connection.disconnect(literal);
             } else if (server.getPlayerList().getPlayer(temp.getId()) != null) {
-                MutableComponent literal = Component.literal("UUID验证失败：")
-                    .withStyle(ChatFormatting.RED)
-                    .append(Component.literal("无法绑定在线玩家")
-                            .withStyle(ChatFormatting.GOLD));
+                MutableComponent literal = MinecraftUtil.translate("gugugu.whitelist.uuid_verification_failed")
+                        .withStyle(ChatFormatting.RED)
+                        .append(MinecraftUtil.translate("gugugu.whitelist.cannot_bind_online_player")
+                                .withStyle(ChatFormatting.GOLD));
                 player.connection.send(new ClientboundDisconnectPacket(literal));
                 player.connection.disconnect(literal);
             } else {
@@ -169,7 +169,7 @@ public class WhitelistManage {
                 GuGuGu.getINSTANCE().getWhitelistConfig().setBind(gameProfile.getName() + ":" + gameProfile.getId().toString(),
                         string);
 
-                MutableComponent message = Component.literal("身份验证成功！重新进入游戏即可正常游玩!")
+                MutableComponent message = MinecraftUtil.translate("gugugu.whitelist.verification_success")
                         .withStyle(ChatFormatting.GREEN);
 
                 player.connection.send(new ClientboundDisconnectPacket(message));

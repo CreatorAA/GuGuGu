@@ -206,10 +206,11 @@ public class BackupCommands {
         BackupManager mgr = GuGuGu.getINSTANCE().getBackupManager();
         MinecraftUtil.getServer().saveEverything(true, true, false);
         try {
+            src.sendSystemMessage(MinecraftUtil.translate("gugugu.backup.inc.start"));
             mgr.backupIncremental("Manual incremental backup by " + src.getTextName());
-            src.sendSuccess(() -> Component.literal("§a[GuGuGu] 增量备份任务已提交。"), true);
+            src.sendSuccess(() -> MinecraftUtil.translate("gugugu.backup.inc.success"), true);
         } catch (Exception e) {
-            src.sendFailure(Component.literal("§c[GuGuGu] 增量备份失败: " + e.getMessage()));
+            src.sendFailure(MinecraftUtil.translate("gugugu.backup.inc.fail", e.getMessage()));
         }
         return 1;
     }
@@ -218,13 +219,13 @@ public class BackupCommands {
         BackupManager mgr = GuGuGu.getINSTANCE().getBackupManager();
         MinecraftUtil.getServer().saveEverything(true, true, false);
         mgr.backupFull("Manual full backup by " + src.getTextName())
-                .thenAccept(p -> src.sendSuccess(() -> Component.literal("§a[GuGuGu] 全量备份完成: " + p), false))
+                .thenAccept(p -> src.sendSuccess(() -> MinecraftUtil.translate("gugugu.backup.full.success", p.toString()), true))
                 .exceptionally(t -> {
-                    src.sendFailure(Component.literal("§c[GuGuGu] 全量备份失败: " + t.getMessage()));
+                    src.sendFailure(MinecraftUtil.translate("gugugu.backup.full.fail", t.getMessage()));
                     log.error("GBackup error", t);
                     return null;
                 });
-        src.sendSuccess(() -> Component.literal("§e[GuGuGu] 全量备份已开始，完成后会通知。"), true);
+        src.sendSuccess(() -> MinecraftUtil.translate("gugugu.backup.full.start"), true);
         return 1;
     }
 
@@ -238,18 +239,18 @@ public class BackupCommands {
         ChunkPos pos = fromSource ?
                 new ChunkPos(src.getPlayerOrException().getOnPos()) :
                 new ChunkPos(blockPos);
-        src.sendSystemMessage(Component.literal("§a[GuGuGu] 回档已开始..."));
+        src.sendSystemMessage(MinecraftUtil.translate("gugugu.backup.rollback.chuck.start", pos.x, pos.z));
         CompletableFuture.runAsync(() -> {
             try {
                 boolean ok = mgr.rollbackChunkHot(level, pos, pos, hotType, updateEntities);
                 if (ok) {
-                    src.sendSuccess(() -> Component.literal("§a[GuGuGu] 区块 [" + pos.x + ", " + pos.z + "] 回档完成"), false);
+                    src.sendSuccess(() -> MinecraftUtil.translate("gugugu.backup.rollback.chuck.success", pos.x, pos.z), false);
                 } else {
-                    src.sendFailure(Component.literal("§e[GuGuGu] 未找到备份或区块无变动"));
+                    src.sendFailure(MinecraftUtil.translate("gugugu.backup.rollback.chuck.fail.1", pos.x, pos.z, hotType));
                 }
             } catch (Exception e) {
                 log.error("GBackup error", e);
-                src.sendFailure(Component.literal("§c[GuGuGu] 回档失败: " + e.getMessage()));
+                src.sendFailure(MinecraftUtil.translate("gugugu.backup.rollback.chuck.fail.2", pos.x, pos.z, hotType, e.getMessage()));
             }
         });
         return 1;
@@ -265,21 +266,18 @@ public class BackupCommands {
         ChunkPos first = new ChunkPos(pos1);
         ChunkPos second = new ChunkPos(pos2);
 
-        src.sendSystemMessage(Component.literal("§a[GuGuGu] 回档已开始..."));
+        src.sendSystemMessage(MinecraftUtil.translate("gugugu.backup.rollback.area.start", first.x, first.z, second.x, second.z));
         CompletableFuture.runAsync(() -> {
             try {
                 boolean ok = mgr.rollbackChunkHot(level, first, second, hotType, updateEntities);
                 if (ok) {
-                    src.sendSuccess(() -> Component.literal(
-                            "§a[GuGuGu] 区块范围 [" +
-                                    first.x + ", " + first.z + "] ~ [" +
-                                    second.x + ", " + second.z + "] 回档完成。"), false);
+                    src.sendSuccess(() -> MinecraftUtil.translate("gugugu.backup.rollback.area.success", first.x, first.z, second.x, second.z), false);
                 } else {
-                    src.sendFailure(Component.literal("§e[GuGuGu] 部分 Region 文件缺失，回档终止。"));
+                    src.sendFailure(MinecraftUtil.translate("gugugu.backup.rollback.area.fail.1", first.x, first.z, second.x, second.z, hotType));
                 }
             } catch (Exception e) {
                 log.error("GBackup error", e);
-                src.sendFailure(Component.literal("§c[GuGuGu] 范围回档失败: " + e.getMessage()));
+                src.sendFailure(MinecraftUtil.translate("gugugu.backup.rollback.area.fail.2", first.x, first.z, second.x, second.z, hotType, e.getMessage()));
             }
         });
 

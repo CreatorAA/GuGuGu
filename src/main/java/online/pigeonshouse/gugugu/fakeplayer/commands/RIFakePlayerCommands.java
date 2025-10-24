@@ -34,6 +34,7 @@ import online.pigeonshouse.gugugu.fakeplayer.control.behaviors.Attack;
 import online.pigeonshouse.gugugu.fakeplayer.control.behaviors.Drop;
 import online.pigeonshouse.gugugu.fakeplayer.control.behaviors.Jump;
 import online.pigeonshouse.gugugu.fakeplayer.control.behaviors.Use;
+import online.pigeonshouse.gugugu.utils.MinecraftUtil;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -43,9 +44,10 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 public class RIFakePlayerCommands {
-    public static final SimpleCommandExceptionType PLAYER_EXIST = new SimpleCommandExceptionType(Component.literal("The player already exists"));
-    public static final SimpleCommandExceptionType PLAYER_IS_REAL = new SimpleCommandExceptionType(Component.literal("The player is a real player"));
-    /// ///////////  行为控制  /////////////////////
+    public static final SimpleCommandExceptionType PLAYER_EXIST = new SimpleCommandExceptionType(
+            MinecraftUtil.translate("gugugu.fakeplayer.error.player_exist"));
+    public static final SimpleCommandExceptionType PLAYER_IS_REAL = new SimpleCommandExceptionType(
+            MinecraftUtil.translate("gugugu.fakeplayer.error.player_is_real"));
 
     public static final Map<UUID, PlayerControl> controlTickTask = new ConcurrentHashMap<>();
     private static final String COMMAND_BASE = "rifakeplayer";
@@ -130,8 +132,10 @@ public class RIFakePlayerCommands {
                                     String playerName = player.getName().getString();
                                     fakePlayerConfig.getAutoLoginNames().add(playerName);
                                     fakePlayerConfig.save();
-                                    ctx.getSource().sendSystemMessage(Component.literal("自动登录设置成功：" + playerName)
-                                            .withStyle(ChatFormatting.YELLOW));
+                                    ctx.getSource().sendSystemMessage(
+                                            MinecraftUtil.translate("gugugu.fakeplayer.auto_login.enable_success")
+                                                    .append(Component.literal(playerName))
+                                                    .withStyle(ChatFormatting.YELLOW));
                                     return 1;
                                 })
                         )
@@ -144,8 +148,10 @@ public class RIFakePlayerCommands {
                                     String playerName = player.getName().getString();
                                     fakePlayerConfig.getAutoLoginNames().remove(playerName);
                                     fakePlayerConfig.save();
-                                    ctx.getSource().sendSystemMessage(Component.literal("自动登录已移除：" + playerName)
-                                            .withStyle(ChatFormatting.YELLOW));
+                                    ctx.getSource().sendSystemMessage(
+                                            MinecraftUtil.translate("gugugu.fakeplayer.auto_login.disable_success")
+                                                    .append(Component.literal(playerName))
+                                                    .withStyle(ChatFormatting.YELLOW));
                                     return 1;
                                 })
                         )
@@ -154,8 +160,10 @@ public class RIFakePlayerCommands {
                         .executes(ctx -> {
                             FakePlayerConfig fakePlayerConfig = GuGuGu.INSTANCE.getFakePlayerConfig();
                             Set<String> autoLoginNames = fakePlayerConfig.getAutoLoginNames();
-                            ctx.getSource().sendSystemMessage(Component.literal("自动登录假人列表：" + String.join(", ", autoLoginNames))
-                                    .withStyle(ChatFormatting.YELLOW));
+                            ctx.getSource().sendSystemMessage(
+                                    MinecraftUtil.translate("gugugu.fakeplayer.auto_login.list")
+                                            .append(Component.literal(String.join(", ", autoLoginNames)))
+                                            .withStyle(ChatFormatting.YELLOW));
                             return 1;
                         })
                 )
@@ -167,10 +175,8 @@ public class RIFakePlayerCommands {
                                 .executes(ctx -> {
                                     ServerPlayer player = EntityArgument.getPlayer(ctx, "player");
                                     if (player instanceof RIFakeServerPlayer fakeServerPlayer) {
-
                                         return 1;
                                     }
-
                                     return 1;
                                 })
                         )
@@ -202,7 +208,7 @@ public class RIFakePlayerCommands {
             return 0;
         }
 
-        source.sendFailure(Component.literal("[GuGuGu] 无法移除非本mod召唤出的假人的玩家！"));
+        source.sendFailure(MinecraftUtil.translate("gugugu.fakeplayer.error.cannot_remove_non_fake_player"));
         return 0;
     }
 

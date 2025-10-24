@@ -1,11 +1,11 @@
 package online.pigeonshouse.gugugu;
 
+import com.google.gson.Gson;
 import com.mojang.brigadier.CommandDispatcher;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.server.MinecraftServer;
-import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.loading.FMLPaths;
 import online.pigeonshouse.gugugu.backup.BackupManager;
@@ -24,7 +24,11 @@ import online.pigeonshouse.gugugu.whitelist.WhitelistManage;
 import online.pigeonshouse.gugugu.whitelist.config.WhitelistConfig;
 
 import java.io.File;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.URL;
 import java.nio.file.Path;
+import java.util.Map;
 
 @Slf4j
 @Mod(value = GuGuGu.MOD_ID)
@@ -46,6 +50,8 @@ public class GuGuGu {
     private BackupManager backupManager;
     @Getter
     public MinecraftServer server;
+    @Getter
+    private Map<String, String> lang;
 
     public GuGuGu() {
         onInitialize();
@@ -53,6 +59,7 @@ public class GuGuGu {
 
     public void onInitialize() {
         INSTANCE = this;
+        initLang();
 
         Path configDir = FMLPaths.CONFIGDIR.get().resolve(MOD_ID);
         File configDirectory = configDir.toFile();
@@ -121,5 +128,21 @@ public class GuGuGu {
         if (o instanceof Boolean bool && !bool) return;
 
         runnable.run();
+    }
+
+    private void initLang() {
+        URL resource = getClass().getClassLoader()
+                .getResource("assets/gugugu/lang/zh_cn.json");
+
+        if (resource == null) {
+            log.error("Failed to load language file!");
+            return;
+        }
+
+        try (InputStream stream = resource.openStream()) {
+            lang = new Gson().fromJson(new InputStreamReader(stream), Map.class);
+        } catch (Exception e) {
+            log.error("Failed to load language file!", e);
+        }
     }
 }
