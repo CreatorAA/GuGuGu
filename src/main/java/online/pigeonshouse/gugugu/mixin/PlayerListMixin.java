@@ -24,6 +24,7 @@ public class PlayerListMixin {
     @Shadow @Final private MinecraftServer server;
 
     @Redirect(method = "placeNewPlayer",
+            require = 0,
             at = @At(value = "NEW",
                     target = "(Lnet/minecraft/server/MinecraftServer;Lnet/minecraft/network/Connection;Lnet/minecraft/server/level/ServerPlayer;Lnet/minecraft/server/network/CommonListenerCookie;)Lnet/minecraft/server/network/ServerGamePacketListenerImpl;"))
     private ServerGamePacketListenerImpl createServerGamePacketListenerImpl(MinecraftServer server, Connection connection, ServerPlayer player, CommonListenerCookie cookie) {

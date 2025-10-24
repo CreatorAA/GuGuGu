@@ -1,6 +1,7 @@
 package online.pigeonshouse.gugugu.fakeplayer;
 
 import com.mojang.authlib.GameProfile;
+import lombok.extern.slf4j.Slf4j;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.PacketFlow;
@@ -19,10 +20,12 @@ import net.minecraft.world.level.block.entity.SkullBlockEntity;
 import online.pigeonshouse.gugugu.GuGuGu;
 import online.pigeonshouse.gugugu.event.MinecraftServerEvents;
 import online.pigeonshouse.gugugu.fakeplayer.config.FakePlayerConfig;
+import online.pigeonshouse.gugugu.utils.MinecraftUtil;
 
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
+@Slf4j
 public class RIFakeServerPlayerFactory {
     public static void init() {
         MinecraftServerEvents.PLAYER_USE_ENTITY.addCallback(RIFakeServerPlayerFactory::onPlayerUseEntity);
@@ -71,11 +74,20 @@ public class RIFakeServerPlayerFactory {
         Connection fakeConnection = RIFakeServerPlayer.createFakeConnection(PacketFlow.SERVERBOUND);
         ClientInformation clientInformation = player.clientInformation();
         CommonListenerCookie listenerCookie = new CommonListenerCookie(gameProfile, 0, clientInformation, false);
+
         try {
             GameProfileCache.setUsesAuthentication(false);
             server.executeBlocking(() -> server.getPlayerList().placeNewPlayer(fakeConnection, player, listenerCookie));
         } finally {
             GameProfileCache.setUsesAuthentication(server.isDedicatedServer() && server.usesAuthentication());
+
+            if (GuGuGu.INSTANCE.getFakePlayerConfig().isAllowFakeServerGamePacketListenerImpl() && MinecraftUtil.findCarpetMod()) {
+                FakePlayerConfig fakePlayerConfig = GuGuGu.INSTANCE.getFakePlayerConfig();
+                fakePlayerConfig.setAllowFakeServerGamePacketListenerImpl(false);
+
+                CompletableFuture.runAsync(fakePlayerConfig::save);
+                log.error("Server detected Carpet Mod, option allowFakeServerGamePacketListenerImpl is invalid, reset to default value");
+            }
         }
 
         player.unsetRemoved();

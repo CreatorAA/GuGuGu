@@ -186,4 +186,13 @@ public class MinecraftUtil {
     public static <T> List<T> iterableToList(Iterable<T> iterable) {
         return StreamSupport.stream(iterable.spliterator(), false).collect(Collectors.toList());
     }
+
+    public static boolean findCarpetMod() {
+        try {
+            Class.forName("carpet.CarpetServer");
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
+        }
+    }
 }
