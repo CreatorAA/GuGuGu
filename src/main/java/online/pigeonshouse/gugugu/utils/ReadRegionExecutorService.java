@@ -42,7 +42,7 @@ public class ReadRegionExecutorService implements WorkerFactory<ChunkPos, ReadRe
         storages = MapUtil.createRegionFileStorages(parent, threadCount);
 
         if (storages.isEmpty()) {
-            throw new IllegalStateException("没有可用的 RegionFileStorage，无法启动 ReadRegionExecutorService");
+            throw new RuntimeException("No available RegionFileStorage, cannot start ReadRegionExecutorService");
         }
 
         this.pool = new GenericThreadPool.Builder<>(this)
@@ -88,7 +88,7 @@ public class ReadRegionExecutorService implements WorkerFactory<ChunkPos, ReadRe
     public Worker<ChunkPos, ScanResult> createWorker() {
         int size = storages.size();
         if (size == 0) {
-            throw new IllegalStateException("没有可用的 RegionFileStorage，无法创建 Worker");
+            throw new RuntimeException("No available RegionFileStorage, cannot create Worker");
         }
         int idx = storageIndex.getAndIncrement() % size;
         return new ChunkWorker(idx);

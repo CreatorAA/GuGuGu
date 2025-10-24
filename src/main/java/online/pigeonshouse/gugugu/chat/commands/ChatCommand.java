@@ -4,11 +4,14 @@ import com.mojang.brigadier.CommandDispatcher;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerPlayer;
 import online.pigeonshouse.gugugu.chat.MessagePipeline;
 import online.pigeonshouse.gugugu.chat.MessageProcessorInfo;
+import online.pigeonshouse.gugugu.utils.MinecraftUtil;
 
 public class ChatCommand {
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher, MessagePipeline pipeline) {
@@ -32,44 +35,53 @@ public class ChatCommand {
     }
 
     private static Component buildComponentsInfo(MessagePipeline pipeline, ServerPlayer sender) {
-        MutableComponent header = Component.literal("=== 消息处理组件列表 ===\n")
-                .withStyle(ChatFormatting.GOLD);
+        MutableComponent header = MinecraftUtil.translate("gugugu.chatEvent.components.header");
 
         MutableComponent content = Component.empty();
 
         for (MessageProcessorInfo info : pipeline.getProcessorInfos()) {
             MutableComponent infoComponent = Component.literal("\n● ")
                     .withStyle(ChatFormatting.DARK_GRAY)
-                    .append(Component.literal(info.getName()).withStyle(ChatFormatting.GOLD))
+                    .append(
+                            Component.literal(info.getName())
+                                    .withStyle(ChatFormatting.GOLD)
+                                    .withStyle(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, info.getName())))
+                                    .withStyle(style -> style.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal("Copy"))))
+                    )
                     .append(Component.literal(" - ").withStyle(ChatFormatting.DARK_GRAY))
                     .append(info.getDescription().copy())
-                    .append(Component.literal("\n  状态: ").withStyle(ChatFormatting.DARK_GRAY))
+                    .append(Component.literal("\n  "))
+                    .append(MinecraftUtil.translate("gugugu.chatEvent.components.status"))
                     .append(buildStatusComponent(info));
 
             if (!info.getExamples().isEmpty()) {
-                infoComponent.append(Component.literal("\n  示例演示（无视禁用）:").withStyle(ChatFormatting.DARK_AQUA));
+                infoComponent.append(Component.literal("\n  "))
+                        .append(MinecraftUtil.translate("gugugu.chatEvent.components.example.demo"));
 
                 for (MessageProcessorInfo.Example example : info.getExamples()) {
                     Component processed = pipeline.test(sender, info.getName(), example.getExample());
 
                     infoComponent.append(
-                            Component.literal("\n    ▶ 输入: ").withStyle(ChatFormatting.GRAY)
+                            Component.literal("\n    ▶ ")
+                                    .withStyle(ChatFormatting.GRAY)
+                                    .append(MinecraftUtil.translate("gugugu.chatEvent.components.example.input"))
                                     .append(Component.literal(example.getExample()).withStyle(ChatFormatting.WHITE))
                     );
 
                     if (!example.getDescription().getString().isEmpty()) {
                         infoComponent.append(
-                                Component.literal("\n      描述: ").withStyle(ChatFormatting.AQUA)
+                                Component.literal("\n      ")
+                                        .append(MinecraftUtil.translate("gugugu.chatEvent.components.example.description"))
                                         .append(example.getDescription())
                         );
                     }
 
                     infoComponent.append(
-                            Component.literal("\n      效果: ").withStyle(ChatFormatting.DARK_GRAY)
+                            Component.literal("\n      ")
+                                    .append(MinecraftUtil.translate("gugugu.chatEvent.components.example.effect"))
                                     .append(processed)
                     );
                 }
-
             }
 
             content = content.append(infoComponent).append(Component.literal("\n"));
@@ -79,7 +91,10 @@ public class ChatCommand {
     }
 
     private static Component buildStatusComponent(MessageProcessorInfo info) {
-        return Component.literal(info.isEnabled() ? "✔ 启用" : "✖ 禁用")
+        String statusKey = info.isEnabled() ?
+                "gugugu.chatEvent.components.status.enabled" :
+                "gugugu.chatEvent.components.status.disabled";
+        return MinecraftUtil.translate(statusKey)
                 .withStyle(info.isEnabled() ? ChatFormatting.DARK_GREEN : ChatFormatting.DARK_RED);
     }
 }

@@ -1,5 +1,6 @@
 package online.pigeonshouse.gugugu;
 
+import com.google.gson.Gson;
 import com.mojang.brigadier.CommandDispatcher;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -24,7 +25,11 @@ import online.pigeonshouse.gugugu.whitelist.WhitelistManage;
 import online.pigeonshouse.gugugu.whitelist.config.WhitelistConfig;
 
 import java.io.File;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.URL;
 import java.nio.file.Path;
+import java.util.Map;
 
 @Slf4j
 public class GuGuGu implements ModInitializer {
@@ -45,9 +50,12 @@ public class GuGuGu implements ModInitializer {
     private BackupManager backupManager;
     @Getter
     public MinecraftServer server;
+    @Getter
+    private Map<String, String> lang;
 
     public void onInitialize() {
         INSTANCE = this;
+        initLang();
 
         Path configDir = FabricLoader.getInstance().getConfigDir().resolve(MOD_ID);
         File configDirectory = configDir.toFile();
@@ -116,5 +124,21 @@ public class GuGuGu implements ModInitializer {
         if (o instanceof Boolean bool && !bool) return;
 
         runnable.run();
+    }
+
+    private void initLang() {
+        URL resource = getClass().getClassLoader()
+                .getResource("assets/gugugu/lang/zh_cn.json");
+
+        if (resource == null) {
+            log.error("Failed to load language file!");
+            return;
+        }
+
+        try (InputStream stream = resource.openStream()) {
+            lang = new Gson().fromJson(new InputStreamReader(stream), Map.class);
+        } catch (Exception e) {
+            log.error("Failed to load language file!", e);
+        }
     }
 }

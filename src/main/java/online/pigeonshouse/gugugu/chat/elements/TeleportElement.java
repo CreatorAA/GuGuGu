@@ -6,6 +6,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.server.level.ServerPlayer;
 import online.pigeonshouse.gugugu.chat.MessageElement;
+import online.pigeonshouse.gugugu.utils.MinecraftUtil;
 
 public class TeleportElement implements MessageElement {
     private final ServerPlayer targetPlayer;
@@ -29,7 +30,7 @@ public class TeleportElement implements MessageElement {
                         ))
                         .withHoverEvent(new HoverEvent(
                                 HoverEvent.Action.SHOW_TEXT,
-                                Component.literal("点击传送到 " + targetPlayer.getName().getString())
+                                MinecraftUtil.translate("gugugu.chatEvent.components.teleport.call", targetPlayer.getName().getString())
                         ))
                 );
     }
