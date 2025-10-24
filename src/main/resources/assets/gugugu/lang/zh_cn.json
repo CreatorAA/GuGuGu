@@ -1,0 +1,101 @@
+{
+  "gugugu.backup.autoBackup.start": "§6[GBackup] §e开始执行自动备份任务...",
+  "gugugu.backup.autoBackup.finish": "§6[GBackup] §2自动备份任务执行完毕！",
+
+  "gugugu.backup.inc.start": "§6[GBackup] §e开始执行增量区块备份任务...",
+  "gugugu.backup.inc.success": "§6[GBackup] §2增量区块备份任务已完成！",
+  "gugugu.backup.inc.fail": "§6[GBackup] §c增量区块备份任务执行失败：§e%s",
+
+  "gugugu.backup.full.start": "§6[GBackup] §e开始执行全量区块备份任务...",
+  "gugugu.backup.full.success": "§6[GBackup] §2全量区块备份任务已完成，备份路径：§e %s",
+  "gugugu.backup.full.fail": "§6[GBackup] §c全量区块备份任务执行失败：§e%s",
+
+  "gugugu.backup.rollback.chuck.start": "§6[GBackup] §e开始执行区块§b[%s§b, %s§b]§e回滚任务...",
+  "gugugu.backup.rollback.chuck.success": "§6[GBackup] §2区块§b[%s§b, %s§b]§2回滚任务已完成！",
+  "gugugu.backup.rollback.chuck.fail.1": "§6[GBackup] §c对区块§b[%s§b, %s§b]§c从§b[%s§b]§c的回滚任务执行失败：疑似找不到该区块信息",
+  "gugugu.backup.rollback.chuck.fail.2": "§6[GBackup] §c对区块§b[%s§b, %s§b]§c从§b[%s§b]§c的回滚任务执行失败：§e%s",
+
+  "gugugu.backup.rollback.area.start": "§6[GBackup] §e开始执行区域§b[%s§b, %s§b]§3 ~ §b[%s§b, %s§b]§e回滚任务...",
+  "gugugu.backup.rollback.area.success": "§6[GBackup] §2区域§b[%s§b, %s§b]§3 ~ §b[%s§b, %s§b]§2回滚任务已完成！",
+  "gugugu.backup.rollback.area.fail.1": "§6[GBackup] §c对区域§b[%s§b, %s§b]§3 ~ §b[%s§b, %s§b]§c从§b[%s§b]§c的回滚任务执行失败：疑似找不到该区块信息",
+  "gugugu.backup.rollback.area.fail.2": "§6[GBackup] §c对区域§b[%s§b, %s§b]§3 ~ §b[%s§b, %s§b]§c从§b[%s§b]§c的回滚任务执行失败：§e%s",
+
+  "gugugu.chatEvent.components.header": "§6=== 消息处理组件列表 ===\n",
+  "gugugu.chatEvent.components.status": "§8状态：",
+  "gugugu.chatEvent.components.status.enabled": "✔ 启用",
+  "gugugu.chatEvent.components.status.disabled": "✖ 禁用",
+  "gugugu.chatEvent.components.example.demo": "§3示例演示（无视禁用）:",
+  "gugugu.chatEvent.components.example.input": "§7输入: ",
+  "gugugu.chatEvent.components.example.description": "§b描述: ",
+  "gugugu.chatEvent.components.example.effect": "§8效果: ",
+
+  "gugugu.chatEvent.components.link.open": "§e点击打开链接：%s",
+  "gugugu.chatEvent.components.mention.call": "§6提及玩家：%s",
+  "gugugu.chatEvent.components.mention": "§6提及了你！",
+  "gugugu.chatEvent.components.teleport.call": "§b点击传送到：%s",
+  "gugugu.chatEvent.components.journeyMap.addwaypoint.warning": "§6[ChatHandler] §e（由于技术原因，此消息依托命令报错执行，如果无法通过点击取得路径点，表示您缺少Journey模组）",
+  "gugugu.chatEvent.components.journeyMap.addwaypoint.fail": "§6[ChatHandler] 未找到对应的 JourneyMap 标记或标记已过期",
+
+  "gugugu.chatEvent.components.xaeroMap.addwaypoint.warning": "§e（如果您看到这条消息，表示您并没有安装Xaero地图）",
+  "gugugu.chatEvent.components.xaeroMap.addwaypoint.fail": "§6[ChatHandler] 未找到对应的Xaero标记或标记已过期",
+
+  "gugugu.processor.mention.description": "§7允许使用§8@{§b玩家名称§8}§7或§8@all§7的方式来对特定的玩家进行提示",
+  "gugugu.processor.mention.example1": "§7此消息会为§8\"@all\"§7标为橙色显示",
+  "gugugu.processor.mention.example2": "§7此消息会为§8\"@Steven\"§7、§8\"@Alice\"§7标为橙色显示",
+  "gugugu.processor.mention.example3": "§7此消息会为§8\"@all\"§7、§8\"@Alice\"§7、§8\"@Steven\"§7标为橙色显示",
+
+  "gugugu.processor.link.description": "§7当玩家消息中出现有效的§9Http链接§7时，自动将其转换为点击访问的链接",
+  "gugugu.processor.link.example1": "§7此消息会为§9\"https://www.baidu.com\"§7标为蓝色显示，并且点击后可以打开链接",
+
+  "gugugu.processor.component.description": "§7（此组件无法被移除）将§6mention§7、§9link§7等特殊消息合并后转换为带有富文本的消息。",
+
+  "gugugu.processor.mention_notify.description": "§7此为§6mention§7的附加组件，实现了为需要被提醒的玩家执行的特殊效果（§b音效§7、§d在屏幕中显示§7等）",
+  "gugugu.processor.mention_notify.example1": "§7该消息被mention处理后会为除了发送者外的所有玩家额外触发§b音效§7和§d屏幕提示",
+
+  "gugugu.processor.teleport.description": "§7如果玩家在聊天窗口中只输入了有效的§b玩家名称§7，则会为其附加点击后传送到该玩家的能力",
+  "gugugu.processor.teleport.example1": "§7此消息会为§b\"Steven\"§7特殊显示，并且点击后可以传送到该玩家处",
+
+  "gugugu.processor.hand_item.description": "§7允许在聊天中展示玩家身上指定物品信息的能力，允许重复出现\n§8允许使用以下格式：\n§6[i]§7 - 主手 §6[io]§7 - 副手",
+  "gugugu.processor.hand_item.example1": "§7此消息允许§6重复使用§7物品标记",
+
+  "gugugu.processor.xaero_map_util.description": "§7Xaero地图工具，使用方式：当你只在§b聊天栏§7中输入§6任何在线玩家§7的名字时，将会在消息末尾自动插入可点击添加的路径点",
+  "gugugu.processor.xaero_map_util.example1": "§7此消息会为§b\"Steven\"§7后额外添加一条§6特殊消息",
+  "gugugu.processor.xaero_map_util.example2": "§7此消息会为§b\"[10, 60, 30]\"§7后额外添加一条§6特殊消息§7，并且以下格式的消息也会被识别：§6[x,z] [x z] [x y z] [x, y, z]",
+
+  "gugugu.processor.journey_map_util.description": "§7JourneyMap工具，使用方式：当你只在§b聊天栏§7中输入§6任何在线玩家§7的名字时，将会在消息末尾自动插入可点击添加的路径点",
+  "gugugu.processor.journey_map_util.example1": "§7此消息会为§b\"Steven\"§7后额外添加一条§6特殊消息",
+  "gugugu.processor.journey_map_util.example2": "§7此消息会为§b\"[10, 60, 30]\"§7后额外添加一条§6特殊消息§7，并且以下格式的消息也会被识别：§6[x,z] [x z] [x y z] [x, y, z]",
+
+  "gugugu.inventory_viewer.glass.filler": "§f填充物",
+  "gugugu.inventory_viewer.glass.current_slot": "§6当前栏位",
+  "gugugu.inventory_viewer.glass.close": "§c关闭菜单",
+  "gugugu.inventory_viewer.glass.switch_to_slot": "§7点击切换至",
+  "gugugu.inventory_viewer.glass.slot_suffix": "号栏位",
+
+  "gugugu.inventory_viewer.info.title": "§6玩家信息",
+  "gugugu.inventory_viewer.info.player_name_prefix": "§9玩家名称: ",
+  "gugugu.inventory_viewer.info.player_uid_prefix": "§9玩家UID: ",
+  "gugugu.inventory_viewer.info.health_prefix": "§9生命值: ",
+  "gugugu.inventory_viewer.info.health_separator": " §f/ ",
+  "gugugu.inventory_viewer.info.food_prefix": "§9饥饿值: ",
+  "gugugu.inventory_viewer.info.food_separator": " §f/ ",
+  "gugugu.inventory_viewer.info.saturation_prefix": "§9饱腹度: ",
+  "gugugu.inventory_viewer.info.experience_prefix": "§9经验值: ",
+  "gugugu.inventory_viewer.info.experience_middle": " §f(",
+  "gugugu.inventory_viewer.info.experience_suffix": "§f)",
+
+  "gugugu.fakeplayer.error.player_exist": "该玩家已存在",
+  "gugugu.fakeplayer.error.player_is_real": "该玩家是真实玩家",
+  "gugugu.fakeplayer.error.cannot_remove_non_fake_player": "§c[GuGuGu] 无法移除非本mod召唤出的假人的玩家！",
+
+  "gugugu.fakeplayer.auto_login.enable_success": "§e自动登录设置成功：",
+  "gugugu.fakeplayer.auto_login.disable_success": "§e自动登录已移除：",
+  "gugugu.fakeplayer.auto_login.list": "§e自动登录假人列表：",
+
+  "gugugu.whitelist.current_uuid": "§e当前身份UUID：",
+  "gugugu.whitelist.uuid_copy_hover": "§7点击复制",
+  "gugugu.whitelist.enter_uuid_prompt": "§e请输入您白名单对应的UUID以验证身份！",
+  "gugugu.whitelist.uuid_verification_failed": "§cUUID验证失败：",
+  "gugugu.whitelist.cannot_bind_online_player": "§6无法绑定在线玩家",
+  "gugugu.whitelist.verification_success": "§a身份验证成功！重新进入游戏即可正常游玩!"
+}

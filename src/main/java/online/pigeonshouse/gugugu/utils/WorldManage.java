@@ -1,6 +1,5 @@
 package online.pigeonshouse.gugugu.utils;
 
-import com.mojang.datafixers.DataFixer;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import lombok.Getter;
@@ -22,9 +21,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunkSection;
 import net.minecraft.world.level.chunk.PalettedContainer;
 import net.minecraft.world.level.chunk.PalettedContainerRO;
-import net.minecraftforge.registries.GameData;
 
-import java.nio.file.Path;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -42,7 +39,7 @@ public class WorldManage {
 
     private static final Codec<PalettedContainer<BlockState>> BLOCK_STATE_CODEC =
             PalettedContainer.codecRW(
-                    GameData.getBlockStateIDMap(),
+                    Block.BLOCK_STATE_REGISTRY,
                     BlockState.CODEC,
                     STRATEGY,
                     Blocks.AIR.defaultBlockState()
@@ -99,7 +96,7 @@ public class WorldManage {
     public static RegionCoords parseRegionName(String name) {
         Matcher m = REGION_NAME_PATTERN.matcher(name);
         if (!m.matches()) {
-            throw new IllegalArgumentException("无效的区域文件名: " + name);
+            throw new IllegalArgumentException("Region file name is invalid: " + name);
         }
         int x = Integer.parseInt(m.group("x"));
         int z = Integer.parseInt(m.group("z"));
