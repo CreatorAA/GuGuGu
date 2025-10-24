@@ -18,6 +18,7 @@ import online.pigeonshouse.gugugu.chat.MessageProcessor;
 import online.pigeonshouse.gugugu.chat.elements.StyledTextElement;
 import online.pigeonshouse.gugugu.chat.elements.TextElement;
 import online.pigeonshouse.gugugu.event.MinecraftServerEvents;
+import online.pigeonshouse.gugugu.utils.MinecraftUtil;
 
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -178,7 +179,7 @@ public class XaeroMapUtilProcessor implements MessageProcessor {
         String uuid = UUID.randomUUID().toString();
         context.addElement(new TextElement(" "));
         context.addElement(createButton(
-                "[点击添加Xaero地图标记]",
+                "[Xaero]",
                 wp.getName(),
                 uuid,
                 ChatFormatting.AQUA
@@ -193,7 +194,7 @@ public class XaeroMapUtilProcessor implements MessageProcessor {
 
         context.addElement(new TextElement(" "));
         context.addElement(createButton(
-                "[点击转换为XaeroMap路径点]",
+                "[XaeroMap]",
                 jmWp.getName(),
                 uuid,
                 ChatFormatting.GREEN
@@ -222,13 +223,10 @@ public class XaeroMapUtilProcessor implements MessageProcessor {
         private int handleWaypointCommand(CommandSourceStack src, String uuid) {
             String waypoint = xaeroWaypoints.getIfPresent(uuid);
             if (waypoint != null) {
-                Component msg = Component.literal(waypoint)
-                        .append(Component.literal("（如果您看到这条消息，表示您并没有安装Xaero地图）")
-                                .withStyle(ChatFormatting.YELLOW));
-                src.sendSystemMessage(msg);
+                src.sendSystemMessage(Component.literal(waypoint).append(MinecraftUtil.translate("gugugu.chatEvent.components.xaeroMap.addwaypoint.warning")));
                 return 1;
             }
-            src.sendFailure(Component.literal("未找到对应的Xaero标记或标记已过期"));
+            src.sendFailure(MinecraftUtil.translate("gugugu.chatEvent.components.xaeroMap.addwaypoint.fail"));
             return 0;
         }
     }

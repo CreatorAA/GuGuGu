@@ -10,7 +10,6 @@ import lombok.Getter;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -20,6 +19,7 @@ import online.pigeonshouse.gugugu.chat.MessageProcessor;
 import online.pigeonshouse.gugugu.chat.elements.StyledTextElement;
 import online.pigeonshouse.gugugu.chat.elements.TextElement;
 import online.pigeonshouse.gugugu.event.MinecraftServerEvents;
+import online.pigeonshouse.gugugu.utils.MinecraftUtil;
 
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -174,14 +174,14 @@ public class JourneyMapUtilProcessor implements MessageProcessor {
     private void addAddButton(MessageContext context, LevelWaypoint wp) {
         String uuid = UUID.randomUUID().toString();
         context.addElement(new TextElement(" "));
-        context.addElement(createButton("[点击添加Journey路径点]", wp.getName(), uuid));
+        context.addElement(createButton("[Journey]", wp.getName(), uuid));
         journeyWaypoints.put(uuid, wp.getJourneyMapWaypointString());
     }
 
     private void addConvertButton(MessageContext context, LevelWaypoint wp) {
         String uuid = UUID.randomUUID().toString();
         context.addElement(new TextElement(" "));
-        context.addElement(createButton("[点击转换为Journey路径点]", wp.getName(), uuid));
+        context.addElement(createButton("[Journey]", wp.getName(), uuid));
         journeyWaypoints.put(uuid, wp.getJourneyMapWaypointString());
     }
 
@@ -217,11 +217,10 @@ public class JourneyMapUtilProcessor implements MessageProcessor {
                 MinecraftServer server = player.getServer();
                 Commands commands = server.getCommands();
                 commands.performPrefixedCommand(stack, waypoint);
-                stack.sendSystemMessage(Component.literal("（由于技术原因，此消息依托命令报错执行，如果无法通过点击取得路径点，表示您缺少Journey模组）")
-                        .withStyle(ChatFormatting.YELLOW));
+                stack.sendSystemMessage(MinecraftUtil.translate("gugugu.chatEvent.components.journeyMap.addwaypoint.warning"));
                 return 1;
             } else {
-                src.sendFailure(Component.literal("未找到对应的 JourneyMap 标记或标记已过期"));
+                src.sendFailure(MinecraftUtil.translate("gugugu.chatEvent.components.journeyMap.addwaypoint.fail"));
                 return 0;
             }
         }

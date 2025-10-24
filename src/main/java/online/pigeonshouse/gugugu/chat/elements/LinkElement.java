@@ -5,6 +5,7 @@ import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 import online.pigeonshouse.gugugu.chat.MessageElement;
+import online.pigeonshouse.gugugu.utils.MinecraftUtil;
 
 public class LinkElement implements MessageElement {
     private final String url;
@@ -22,7 +23,7 @@ public class LinkElement implements MessageElement {
                         .withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, url))
                         .withHoverEvent(new HoverEvent(
                                 HoverEvent.Action.SHOW_TEXT,
-                                Component.literal("打开链接: " + url)
+                                MinecraftUtil.translate("gugugu.chatEvent.components.link.open", url)
                         ))
                 );
     }
