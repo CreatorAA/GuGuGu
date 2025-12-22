@@ -1,65 +1,75 @@
 package online.pigeonshouse.gugugu.backup;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import lombok.Data;
-import online.pigeonshouse.gugugu.utils.FileUtil;
+import com.google.gson.annotations.Expose;
+import lombok.Getter;
+import lombok.Setter;
+import online.pigeonshouse.gugugu.config.AbstractConfig;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
-@Data
-public class BackupConfig {
-    public static final Gson GSON = new GsonBuilder()
-            .setPrettyPrinting()
-            .create();
+@Getter
+@Setter
+public class BackupConfig extends AbstractConfig<BackupConfig> {
     /**
      * 自动全量备份时间间隔（分钟）
      */
+    @Expose
     private int autoBackupMinutes = 60;
+
     /**
      * 启用全量备份定时任务
      */
+    @Expose
     private boolean enableAutoBackup = false;
+
     /**
      * 定时任务执行时附带执行增量备份
      */
+    @Expose
     private boolean autoBackupWithIncremental = false;
+
     /**
      * 最大保留全量备份数
      */
+    @Expose
     private int keepFull = 3;
+
     /**
-     * 是否对全量备份启用 ZIP 压缩
+     * 热回档时使用的数据来源："inc"（增量）或 "full"（全量），默认全量
      */
-    private boolean compressFull = true;
-    /**
-     * 热回档时使用的数据来源："inc"（增量）或 "full"（全量），默认增量
-     */
-    private String hotRollbackSource = BackupManager.FULL;
+    @Expose
+    private String hotRollbackSource = "full";
+
     /**
      * 指令白名单 —— 权限不足但被允许使用 /gbackup 的玩家名称列表
      */
-    private List<String> commandWhitelist = new ArrayList<>();
+    @Expose
+    private List<String> commandWhitelist;
 
-    public static BackupConfig loadOrCreate(Path file) throws IOException {
-        if (Files.notExists(file)) {
-            BackupConfig cfg = new BackupConfig();
-            cfg.save(file);
-            return cfg;
-        }
-        try (var reader = Files.newBufferedReader(file)) {
-            return GSON.fromJson(reader, BackupConfig.class);
-        }
+    public BackupConfig(File configFile) {
+        super(configFile);
     }
 
-    public void save(Path file) throws IOException {
-        FileUtil.createFile(file);
-        try (var writer = Files.newBufferedWriter(file)) {
-            GSON.toJson(this, writer);
-        }
+    @Override
+    protected void createDefaultConfig() {
+        autoBackupMinutes = 60;
+        enableAutoBackup = false;
+        autoBackupWithIncremental = false;
+        keepFull = 3;
+        hotRollbackSource = "full";
+        commandWhitelist = new ArrayList<>();
+    }
+
+    @Override
+    protected void copyFrom(BackupConfig other) {
+        this.autoBackupMinutes = other.autoBackupMinutes;
+        this.enableAutoBackup = other.enableAutoBackup;
+        this.autoBackupWithIncremental = other.autoBackupWithIncremental;
+        this.keepFull = other.keepFull;
+        this.hotRollbackSource = other.hotRollbackSource;
+        this.commandWhitelist = Objects.requireNonNullElseGet(other.commandWhitelist, ArrayList::new);
     }
 }

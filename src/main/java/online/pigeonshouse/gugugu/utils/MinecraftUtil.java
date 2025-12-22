@@ -5,6 +5,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -13,6 +14,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.*;
+import online.pigeonshouse.gugugu.GuGuGu;
 
 import java.util.List;
 import java.util.Map;
@@ -71,14 +73,6 @@ public class MinecraftUtil {
      * @return lore ListTag
      */
     public static ListTag addLore(ItemStack itemStack, Component component) {
-//        ItemLore itemLore = itemStack.get(DataComponents.LORE);
-//
-//        if (itemLore == null) {
-//            itemLore = new ItemLore(List.of());
-//            return itemStack.set(DataComponents.LORE, itemLore);
-//        }
-//
-//        return itemStack.set(DataComponents.LORE, itemLore.withLineAdded(component));
         CompoundTag tag = itemStack.getOrCreateTag();
 
         if (!tag.contains(ItemStack.TAG_DISPLAY, 10)) {
@@ -92,24 +86,12 @@ public class MinecraftUtil {
         }
 
         ListTag loreList = displayTag.getList(ItemStack.TAG_LORE, 8);
-        loreList.add(StringTag.valueOf(component.getString()));
+        loreList.add(StringTag.valueOf(Component.Serializer.toJson(component)));
 
         return loreList;
     }
 
     public static ListTag addLore(ItemStack itemStack, Component... components) {
-//        ItemLore itemLore = itemStack.get(DataComponents.LORE);
-//
-//        if (itemLore == null) {
-//            itemLore = new ItemLore(List.of(components));
-//            return itemStack.set(DataComponents.LORE, itemLore);
-//        }
-//
-//        for (Component component : components) {
-//            itemLore = itemLore.withLineAdded(component);
-//        }
-//
-//        return itemStack.set(DataComponents.LORE, itemLore);
         CompoundTag tag = itemStack.getOrCreateTag();
 
         if (!tag.contains(ItemStack.TAG_DISPLAY, 10)) {
@@ -124,8 +106,10 @@ public class MinecraftUtil {
 
         ListTag loreList = displayTag.getList(ItemStack.TAG_LORE, 8);
         for (Component component : components) {
-            loreList.add(StringTag.valueOf(component.getString()));
+            loreList.add(StringTag.valueOf(Component.Serializer.toJson(component)));
         }
+
+        displayTag.put("Lore", loreList);
 
         return loreList;
     }
@@ -219,5 +203,14 @@ public class MinecraftUtil {
      */
     public static <T> List<T> iterableToList(Iterable<T> iterable) {
         return StreamSupport.stream(iterable.spliterator(), false).collect(Collectors.toList());
+    }
+
+    public static MutableComponent translate(String key, Object... args) {
+        String lang = GuGuGu.getINSTANCE()
+                .getLang()
+                .get(key);
+
+        if (lang != null) return Component.translatableWithFallback(key, lang, args);
+        return Component.translatable(key, args);
     }
 }
