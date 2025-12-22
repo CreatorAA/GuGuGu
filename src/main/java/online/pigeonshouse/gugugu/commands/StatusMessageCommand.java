@@ -21,8 +21,17 @@ import java.util.List;
 public class StatusMessageCommand {
     private static final DecimalFormat DECIMAL_FORMAT = new DecimalFormat("#.##");
     private static final DecimalFormat PERCENT_FORMAT = new DecimalFormat("#.#");
+    private static final int DIMENSIONS_PER_PAGE = 3; // 每页显示的维度数
 
     public static void sendStats(ServerPlayer player, MinecraftServer server) {
+        sendStats(player, server, 1, null);
+    }
+
+    public static void sendStats(ServerPlayer player, MinecraftServer server, int page) {
+        sendStats(player, server, page, null);
+    }
+
+    public static void sendStats(ServerPlayer player, MinecraftServer server, int page, String dimensionFilter) {
         long[] tickTimes = server.getTickTimesNanos();
         TickStats tickStats = calculateTickStats(tickTimes);
 
@@ -121,7 +130,7 @@ public class StatusMessageCommand {
 
         player.sendSystemMessage(tpsInfo.append(msptInfo));
 
-        // MSPT 详细统计 - 紧凑显示
+        // MSPT 详细统计
         player.sendSystemMessage(Component.literal("  Med: ").withStyle(ChatFormatting.DARK_GRAY)
                 .append(Component.literal(DECIMAL_FORMAT.format(tickStats.median))
                         .withStyle(tickStats.median <= 50 ? ChatFormatting.GREEN : ChatFormatting.YELLOW))
@@ -154,15 +163,101 @@ public class StatusMessageCommand {
                                         memUsagePercent > 90 ? ChatFormatting.RED : ChatFormatting.GREEN)))));
         player.sendSystemMessage(memInfo);
 
-        // ========== 维度详情 ==========
+        // ========== 维度详情（分页） ==========
         player.sendSystemMessage(Component.literal("─────────────────").withStyle(ChatFormatting.DARK_GRAY));
 
-        List<ServerLevel> levels = MinecraftUtil.iterableToStream(server.getAllLevels()).toList();
-        for (int i = 0; i < levels.size(); i++) {
-            boolean isLast = i == levels.size() - 1;
+        List<ServerLevel> allLevels = MinecraftUtil.iterableToStream(server.getAllLevels()).toList();
+
+        List<ServerLevel> levels;
+        if (dimensionFilter != null && !dimensionFilter.isEmpty()) {
+            levels = allLevels.stream()
+                    .filter(level -> level.dimension().location().getPath().equalsIgnoreCase(dimensionFilter) ||
+                            getDimensionName(level).equalsIgnoreCase(dimensionFilter))
+                    .toList();
+            
+            if (levels.isEmpty()) {
+                player.sendSystemMessage(Component.literal("未找到维度: ").withStyle(ChatFormatting.RED)
+                        .append(Component.literal(dimensionFilter).withStyle(ChatFormatting.YELLOW)));
+                player.sendSystemMessage(Component.literal("可用维度: ").withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal(allLevels.stream()
+                                .map(l -> l.dimension().location().getPath())
+                                .reduce((a, b) -> a + ", " + b)
+                                .orElse("无")).withStyle(ChatFormatting.AQUA)));
+                player.sendSystemMessage(Component.literal("━━━━━━━━━━━━━━━━━").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
+                return;
+            }
+        } else {
+            levels = allLevels;
+        }
+        
+        int totalLevels = levels.size();
+        int totalPages = (int) Math.ceil((double) totalLevels / DIMENSIONS_PER_PAGE);
+
+        if (page < 1) page = 1;
+        if (page > totalPages) page = totalPages;
+        
+        int startIdx = (page - 1) * DIMENSIONS_PER_PAGE;
+        int endIdx = Math.min(startIdx + DIMENSIONS_PER_PAGE, totalLevels);
+
+        for (int i = startIdx; i < endIdx; i++) {
+            boolean isLast = i == endIdx - 1;
             sendWorldInfo(player, levels.get(i), isLast);
         }
 
+        if (totalPages > 1 || dimensionFilter != null) {
+            MutableComponent pageNav = Component.literal("─── ").withStyle(ChatFormatting.DARK_GRAY);
+
+            if (page > 1) {
+                String cmd = dimensionFilter != null ? 
+                        "/gugugu showstats " + (page - 1) + " " + dimensionFilter :
+                        "/gugugu showstats " + (page - 1);
+                pageNav.append(Component.literal("[<]").withStyle(ChatFormatting.YELLOW)
+                        .withStyle(style -> style
+                                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                                        Component.literal("上一页").withStyle(ChatFormatting.YELLOW)))
+                                .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, cmd))));
+            } else {
+                pageNav.append(Component.literal("[<]").withStyle(ChatFormatting.DARK_GRAY));
+            }
+
+            if (dimensionFilter != null) {
+                pageNav.append(Component.literal(" 维度: ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal(dimensionFilter).withStyle(ChatFormatting.AQUA))
+                        .append(Component.literal(" (" + totalLevels + ") ")
+                                .withStyle(ChatFormatting.DARK_GRAY));
+            } else {
+                pageNav.append(Component.literal(" 维度 ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal(page + "/" + totalPages).withStyle(ChatFormatting.WHITE))
+                        .append(Component.literal(" (" + startIdx + "-" + (endIdx - 1) + "/" + (totalLevels - 1) + ") ")
+                                .withStyle(ChatFormatting.DARK_GRAY));
+            }
+
+            if (page < totalPages) {
+                String cmd = dimensionFilter != null ? 
+                        "/gugugu showstats " + (page + 1) + " " + dimensionFilter :
+                        "/gugugu showstats " + (page + 1);
+                pageNav.append(Component.literal("[>]").withStyle(ChatFormatting.YELLOW)
+                        .withStyle(style -> style
+                                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                                        Component.literal("下一页").withStyle(ChatFormatting.YELLOW)))
+                                .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, cmd))));
+            } else {
+                pageNav.append(Component.literal("[>]").withStyle(ChatFormatting.DARK_GRAY));
+            }
+
+            if (dimensionFilter != null) {
+                pageNav.append(Component.literal(" [全部]").withStyle(ChatFormatting.GOLD)
+                        .withStyle(style -> style
+                                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                                        Component.literal("查看所有维度").withStyle(ChatFormatting.YELLOW)))
+                                .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND,
+                                        "/gugugu showstats 1"))));
+            }
+            
+            pageNav.append(Component.literal(" ───").withStyle(ChatFormatting.DARK_GRAY));
+            player.sendSystemMessage(pageNav);
+        }
+        
         player.sendSystemMessage(Component.literal("━━━━━━━━━━━━━━━━━").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
     }
 
@@ -173,19 +268,15 @@ public class StatusMessageCommand {
         int chunks = lvl.getChunkSource().getLoadedChunksCount();
         int tickingChunks = lvl.getChunkSource().getTickingGenerated();
 
-        // 获取可生成区块数量（用于计算生物上限）
         ServerChunkCache chunkSource = lvl.getChunkSource();
         int spawnableChunks = chunkSource.chunkMap.getDistanceManager().getNaturalSpawnChunkCount();
 
-        // 获取各类生物的实际数量和上限
         NaturalSpawner.SpawnState spawnState = lvl.getChunkSource().getLastSpawnState();
         MobCategoryStats monsterStats = getMobCategoryStats(spawnState, MobCategory.MONSTER, spawnableChunks);
         MobCategoryStats creatureStats = getMobCategoryStats(spawnState, MobCategory.CREATURE, spawnableChunks);
         MobCategoryStats waterCreatureStats = getMobCategoryStats(spawnState, MobCategory.WATER_CREATURE, spawnableChunks);
         MobCategoryStats waterAmbientStats = getMobCategoryStats(spawnState, MobCategory.WATER_AMBIENT, spawnableChunks);
-        MobCategoryStats ambientStats = getMobCategoryStats(spawnState, MobCategory.AMBIENT, spawnableChunks);
 
-        // 获取总实体数
         int totalEntities = spawnState.getMobCategoryCounts().values().stream().mapToInt(Integer::intValue).sum();
 
         ChatFormatting entityColor = totalEntities > 1000 ? ChatFormatting.RED :
@@ -196,9 +287,15 @@ public class StatusMessageCommand {
 
         String prefix = isLast ? "└ " : "├ ";
 
-        // 维度名称行 + 基础信息整合
         MutableComponent dimensionLine = Component.literal(prefix).withStyle(ChatFormatting.GRAY)
-                .append(Component.literal(dimensionName).withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD))
+                .append(Component.literal(dimensionName).withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD)
+                        .withStyle(style -> style
+                                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                                        Component.literal("点击查看该维度详情\n").withStyle(ChatFormatting.YELLOW)
+                                                .append(Component.literal("维度ID: ").withStyle(ChatFormatting.GRAY))
+                                                .append(Component.literal(dimensionKey).withStyle(ChatFormatting.AQUA))))
+                                .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND,
+                                        "/gugugu showstats 1 " + dimensionKey))))
                 .append(Component.literal(" │ ").withStyle(ChatFormatting.DARK_GRAY))
                 .append(Component.literal("玩家:").withStyle(ChatFormatting.DARK_GRAY))
                 .append(Component.literal(String.valueOf(playerCount))
@@ -206,15 +303,17 @@ public class StatusMessageCommand {
                 .append(Component.literal(" │ ").withStyle(ChatFormatting.DARK_GRAY))
                 .append(Component.literal("区块:").withStyle(ChatFormatting.DARK_GRAY))
                 .append(Component.literal(String.valueOf(chunks)).withStyle(chunkColor))
-                .append(Component.literal("/" + tickingChunks).withStyle(ChatFormatting.DARK_GRAY))
-                .withStyle(style -> style.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-                        Component.literal("维度: " + dimensionKey + "\n\n").withStyle(ChatFormatting.YELLOW)
-                                .append(Component.literal("已加载区块: ").withStyle(ChatFormatting.GRAY))
-                                .append(Component.literal(chunks + "\n").withStyle(ChatFormatting.WHITE))
-                                .append(Component.literal("活跃区块: ").withStyle(ChatFormatting.GRAY))
-                                .append(Component.literal(tickingChunks + "\n").withStyle(ChatFormatting.WHITE))
-                                .append(Component.literal("可生成区块: ").withStyle(ChatFormatting.GRAY))
-                                .append(Component.literal(String.valueOf(spawnableChunks)).withStyle(ChatFormatting.WHITE)))));
+                .append(Component.literal("/" + tickingChunks).withStyle(ChatFormatting.DARK_GRAY));
+
+        dimensionLine.withStyle(style -> style.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                Component.literal("维度: " + dimensionKey + "\n\n").withStyle(ChatFormatting.YELLOW)
+                        .append(Component.literal("已加载区块: ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal(chunks + "\n").withStyle(ChatFormatting.WHITE))
+                        .append(Component.literal("活跃区块: ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal(tickingChunks + "\n").withStyle(ChatFormatting.WHITE))
+                        .append(Component.literal("可生成区块: ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal(spawnableChunks + "\n\n").withStyle(ChatFormatting.WHITE))
+                        .append(Component.literal("点击维度名查看详情").withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC)))));
 
         player.sendSystemMessage(dimensionLine);
 

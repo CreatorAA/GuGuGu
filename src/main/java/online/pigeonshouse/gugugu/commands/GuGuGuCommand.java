@@ -1,6 +1,8 @@
 package online.pigeonshouse.gugugu.commands;
 
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
@@ -20,13 +22,38 @@ public class GuGuGuCommand {
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher, MessagePipeline pipeline) {
         LiteralArgumentBuilder<CommandSourceStack> mainCommand = Commands.literal("gugugu")
+                // kill me
+                .then(Commands.literal("killme")
+                        .executes(ctx -> {
+                            ServerPlayer player = ctx.getSource().getPlayerOrException();
+                            player.kill();
+                            return 1;
+                        })
+                )
                 // showstats 子命令
                 .then(Commands.literal("showstats")
                         .executes(ctx -> {
                             ServerPlayer player = ctx.getSource().getPlayerOrException();
-                            StatusMessageCommand.sendStats(player, player.getServer());
+                            StatusMessageCommand.sendStats(player, player.getServer(), 1, null);
                             return 1;
                         })
+                        .then(Commands.argument("page", IntegerArgumentType.integer(1))
+                                .executes(ctx -> {
+                                    ServerPlayer player = ctx.getSource().getPlayerOrException();
+                                    int page = IntegerArgumentType.getInteger(ctx, "page");
+                                    StatusMessageCommand.sendStats(player, player.getServer(), page, null);
+                                    return 1;
+                                })
+                                .then(Commands.argument("dimension", StringArgumentType.word())
+                                        .executes(ctx -> {
+                                            ServerPlayer player = ctx.getSource().getPlayerOrException();
+                                            int page = IntegerArgumentType.getInteger(ctx, "page");
+                                            String dimension = StringArgumentType.getString(ctx, "dimension");
+                                            StatusMessageCommand.sendStats(player, player.getServer(), page, dimension);
+                                            return 1;
+                                        })
+                                )
+                        )
                 )
                 // tpf 子命令
                 .then(Commands.literal("tpf")

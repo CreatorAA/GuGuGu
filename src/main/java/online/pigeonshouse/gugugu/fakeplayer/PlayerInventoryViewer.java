@@ -238,8 +238,4 @@ public class PlayerInventoryViewer extends SimpleContainer {
             super.clicked(i, j, clickType, player);
         }
     }
-
-
-
-
 }
