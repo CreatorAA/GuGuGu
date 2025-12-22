@@ -87,10 +87,14 @@ GuGuGu 模组提供全面的服务器管理工具，增强玩家体验和服务�
 
 ```bash
 # 生命周期管理
-/gu fakeplayer spawn <名称>                                    # 在当前位置生成假人
-/gu fakeplayer spawn <名称> <游戏模式>                         # 指定游戏模式生成假人
-/gu fakeplayer spawn <名称> <游戏模式> <坐标>                  # 在指定位置生成假人
-/gu fakeplayer kill <假人>                                     # 移除假人
+/gu fakeplayer spawn <名称>                                           # 在当前位置生成假人
+/gu fakeplayer spawn <名称> <坐标>                                    # 在指定坐标生成假人
+/gu fakeplayer spawn <名称> <坐标> <yaw> <pitch>                      # 指定坐标和朝向
+/gu fakeplayer spawn <名称> <坐标> in <维度>                          # 在指定维度生成假人
+/gu fakeplayer spawn <名称> <坐标> <yaw> <pitch> in <维度>            # 指定坐标、朝向和维度
+/gu fakeplayer spawn <名称> <坐标> in <维度> mode <游戏模式>          # 指定维度和游戏模式
+/gu fakeplayer spawn <名称> <坐标> <yaw> <pitch> in <维度> mode <游戏模式> # 完整参数生成假人
+/gu fakeplayer kill <假人>                                            # 移除假人
 
 # 基础行为控制
 /gu fakeplayer action <假人> attack [once] [interval]          # 攻击
