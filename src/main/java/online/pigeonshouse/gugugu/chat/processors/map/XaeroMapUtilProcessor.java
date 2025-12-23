@@ -109,7 +109,8 @@ public class XaeroMapUtilProcessor implements MessageProcessor {
         Matcher coordMatcher = COORD_PATTERN.matcher(message);
         if (coordMatcher.matches()) {
             int x = Integer.parseInt(coordMatcher.group(1));
-            int y; int z;
+            int y;
+            int z;
             if (coordMatcher.group(3) != null) {
                 y = Integer.parseInt(coordMatcher.group(2));
                 z = Integer.parseInt(coordMatcher.group(3));

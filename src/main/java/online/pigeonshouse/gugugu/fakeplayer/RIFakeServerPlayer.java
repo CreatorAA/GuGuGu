@@ -9,7 +9,6 @@ import lombok.extern.slf4j.Slf4j;
 import net.minecraft.CrashReport;
 import net.minecraft.CrashReportCategory;
 import net.minecraft.ReportedException;
-import net.minecraft.Util;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.*;
 import net.minecraft.network.chat.Component;

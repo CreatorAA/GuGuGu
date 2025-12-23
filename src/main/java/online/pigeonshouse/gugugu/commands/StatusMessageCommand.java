@@ -1,50 +1,53 @@
 package online.pigeonshouse.gugugu.commands;
 
-import com.mojang.brigadier.CommandDispatcher;
-import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import net.minecraft.ChatFormatting;
-import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerChunkCache;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.entity.MobCategory;
+import net.minecraft.world.level.NaturalSpawner;
 import online.pigeonshouse.gugugu.utils.MinecraftUtil;
 
 import java.lang.management.ManagementFactory;
 import java.text.DecimalFormat;
+import java.util.Arrays;
 import java.util.List;
 
 public class StatusMessageCommand {
     private static final DecimalFormat DECIMAL_FORMAT = new DecimalFormat("#.##");
+    private static final DecimalFormat PERCENT_FORMAT = new DecimalFormat("#.#");
+    private static final int DIMENSIONS_PER_PAGE = 3; // 每页显示的维度数
 
-    public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
-        dispatcher.register(
-                LiteralArgumentBuilder.<CommandSourceStack>literal("showstats")
-                        .executes(ctx -> {
-                            ServerPlayer player = ctx.getSource().getPlayerOrException();
-                            sendStats(player, player.getServer());
-                            return 1;
-                        })
-        );
+    public static void sendStats(ServerPlayer player, MinecraftServer server) {
+        sendStats(player, server, 1, null);
     }
 
-    private static void sendStats(ServerPlayer player, MinecraftServer server) {
-        double mspt = server.getAverageTickTimeNanos() / 1_000_000.0;
-        double tps = Math.min(1000.0 / mspt, 20.0);
-        long usedMem = (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / (1024 * 1024);
-        long maxMem = Runtime.getRuntime().maxMemory() / (1024 * 1024);
+    public static void sendStats(ServerPlayer player, MinecraftServer server, int page) {
+        sendStats(player, server, page, null);
+    }
+
+    public static void sendStats(ServerPlayer player, MinecraftServer server, int page, String dimensionFilter) {
+        long[] tickTimes = server.getTickTimesNanos();
+        TickStats tickStats = calculateTickStats(tickTimes);
+
+        Runtime runtime = Runtime.getRuntime();
+        long usedMem = (runtime.totalMemory() - runtime.freeMemory()) / (1024 * 1024);
+        long maxMem = runtime.maxMemory() / (1024 * 1024);
+        long allocatedMem = runtime.totalMemory() / (1024 * 1024);
+        double memUsagePercent = (double) usedMem / maxMem * 100;
 
         long uptimeMs = ManagementFactory.getRuntimeMXBean().getUptime();
-        long upH = uptimeMs / 3_600_000;
-        long upM = (uptimeMs / 60_000) % 60;
+        String uptimeStr = formatUptime(uptimeMs);
 
         int playerCount = server.getPlayerCount();
         int maxPlayers = server.getMaxPlayers();
+        double playerPercent = (double) playerCount / maxPlayers * 100;
+
         String version = server.getServerVersion();
         long seed = server.overworld().getSeed();
 
@@ -56,78 +59,406 @@ public class StatusMessageCommand {
         int m = (int) ((tod % 1000) * 60 / 1000);
         String timeStr = String.format("Day %d | %02d:%02d", day, h, m);
 
-        player.sendSystemMessage(Component.literal("=== Server Status ===").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
+        player.sendSystemMessage(Component.literal("━━━━━ ").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD)
+                .append(Component.literal("服务器状态").withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD))
+                .append(Component.literal(" ━━━━━").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD)));
 
-        MutableComponent base = Component.literal("")
-                .append(interactiveLabel("Version", version,
-                        null,
-                        null, ChatFormatting.AQUA))
-                .append(interactiveLabel("Players", playerCount + "/" + maxPlayers,
-                        null, null,
-                        playerCount >= maxPlayers * 0.9 ? ChatFormatting.RED : playerCount >= maxPlayers * 0.7 ? ChatFormatting.YELLOW : ChatFormatting.GREEN))
-                .append(interactiveLabel("Time", timeStr,
-                        null, null, ChatFormatting.YELLOW))
-                .append(interactiveLabel("Uptime", upH + "h " + upM + "m",
-                        null, null, ChatFormatting.GRAY))
-                .append(interactiveLabel("Seed", String.valueOf(seed),
-                        Component.literal("世界种子"),
-                        new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, String.valueOf(seed)), ChatFormatting.DARK_GREEN));
-        player.sendSystemMessage(base);
+        player.sendSystemMessage(Component.literal("版本: ").withStyle(ChatFormatting.GRAY)
+                .append(Component.literal(version).withStyle(ChatFormatting.AQUA))
+                .append(Component.literal(" │ ").withStyle(ChatFormatting.DARK_GRAY))
+                .append(Component.literal("运行: ").withStyle(ChatFormatting.GRAY))
+                .append(Component.literal(uptimeStr).withStyle(ChatFormatting.WHITE)));
 
-        MutableComponent perf = Component.literal("")
-                .append(interactiveLabel("TPS", DECIMAL_FORMAT.format(tps) + " (" + DECIMAL_FORMAT.format(tps / 20 * 100) + "%)",
-                        null, null,
-                        tps >= 19.5 ? ChatFormatting.GREEN : tps >= 18 ? ChatFormatting.YELLOW : ChatFormatting.RED))
-                .append(interactiveLabel("MSPT", DECIMAL_FORMAT.format(mspt) + "ms",
-                        null, null,
-                        mspt <= 50 ? ChatFormatting.GREEN : mspt <= 100 ? ChatFormatting.YELLOW : ChatFormatting.RED))
-                .append(interactiveLabel("Memory", usedMem + "MB/" + maxMem + "MB",
-                        null, null,
-                        (double) usedMem / maxMem > 0.9 ? ChatFormatting.RED : (double) usedMem / maxMem > 0.7 ? ChatFormatting.YELLOW : ChatFormatting.GREEN));
-        player.sendSystemMessage(perf);
+        MutableComponent playerInfo = Component.literal("玩家: ").withStyle(ChatFormatting.GRAY)
+                .append(Component.literal(playerCount + "/" + maxPlayers)
+                        .withStyle(playerCount >= maxPlayers * 0.9 ? ChatFormatting.RED :
+                                playerCount >= maxPlayers * 0.7 ? ChatFormatting.YELLOW : ChatFormatting.GREEN))
+                .append(Component.literal(" (" + PERCENT_FORMAT.format(playerPercent) + "%)")
+                        .withStyle(ChatFormatting.DARK_GRAY))
+                .append(Component.literal(" │ ").withStyle(ChatFormatting.DARK_GRAY))
+                .append(Component.literal("时间: ").withStyle(ChatFormatting.GRAY))
+                .append(Component.literal(timeStr).withStyle(ChatFormatting.YELLOW));
+        player.sendSystemMessage(playerInfo);
 
-        player.sendSystemMessage(Component.literal("--- World Details ---").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
-        List<ServerLevel> levels = MinecraftUtil.iterableToStream(server.getAllLevels()).toList();
-        levels.forEach(lvl -> sendWorldInfo(player, lvl));
+        MutableComponent seedInfo = Component.literal("种子: ").withStyle(ChatFormatting.GRAY)
+                .append(Component.literal(String.valueOf(seed)).withStyle(ChatFormatting.DARK_GREEN)
+                        .withStyle(style -> style
+                                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                                        Component.literal("点击复制种子").withStyle(ChatFormatting.YELLOW)))
+                                .withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, String.valueOf(seed)))));
+        player.sendSystemMessage(seedInfo);
 
-        player.sendSystemMessage(Component.literal("====================").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
-    }
+        // ========== 性能指标 ==========
+        player.sendSystemMessage(Component.literal("─────────────────").withStyle(ChatFormatting.DARK_GRAY));
+        MutableComponent tpsInfo = Component.literal("TPS: ").withStyle(ChatFormatting.GRAY)
+                .append(Component.literal(DECIMAL_FORMAT.format(tickStats.tps))
+                        .withStyle(tickStats.tps >= 19.5 ? ChatFormatting.GREEN :
+                                tickStats.tps >= 18.0 ? ChatFormatting.YELLOW :
+                                        tickStats.tps >= 15.0 ? ChatFormatting.GOLD : ChatFormatting.RED))
+                .append(Component.literal("/20").withStyle(ChatFormatting.DARK_GRAY))
+                .append(Component.literal(" (" + PERCENT_FORMAT.format(tickStats.tps / 20.0 * 100) + "%)")
+                        .withStyle(ChatFormatting.DARK_GRAY))
+                .withStyle(style -> style.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                        Component.literal("Ticks Per Second\n\n").withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD)
+                                .append(Component.literal("理想值: ").withStyle(ChatFormatting.GRAY))
+                                .append(Component.literal("20.0\n").withStyle(ChatFormatting.GREEN))
+                                .append(Component.literal("当前值: ").withStyle(ChatFormatting.GRAY))
+                                .append(Component.literal(DECIMAL_FORMAT.format(tickStats.tps)).withStyle(
+                                        tickStats.tps >= 19.5 ? ChatFormatting.GREEN : ChatFormatting.RED)))));
 
-    private static void sendWorldInfo(ServerPlayer player, ServerLevel lvl) {
-        String nm = lvl.dimension().location().getPath();
-        int p = lvl.players().size();
-        int chunks = lvl.getChunkSource().getLoadedChunksCount();
-        List<Entity> ents = MinecraftUtil.iterableToList(lvl.getEntities().getAll());
-        long mons = ents.stream().filter(e -> e instanceof Monster).count();
-        int tot = ents.size();
-        int cap = p * 70;
-        double perc = (double) mons / cap;
-        ChatFormatting mobColor = perc < 0.5 ? ChatFormatting.GREEN : perc < 0.8 ? ChatFormatting.YELLOW : perc < 1 ? ChatFormatting.GOLD : ChatFormatting.RED;
+        MutableComponent msptInfo = Component.literal(" │ MSPT: ").withStyle(ChatFormatting.GRAY)
+                .append(Component.literal(DECIMAL_FORMAT.format(tickStats.avg))
+                        .withStyle(tickStats.avg <= 50 ? ChatFormatting.GREEN :
+                                tickStats.avg <= 100 ? ChatFormatting.YELLOW : ChatFormatting.RED))
+                .append(Component.literal("/50ms").withStyle(ChatFormatting.DARK_GRAY))
+                .append(Component.literal(" [" + DECIMAL_FORMAT.format(tickStats.min) + "-" +
+                        DECIMAL_FORMAT.format(tickStats.max) + "]").withStyle(ChatFormatting.DARK_GRAY))
+                .withStyle(style -> style.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                        Component.literal("Milliseconds Per Tick\n\n").withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD)
+                                .append(Component.literal("理想值: ").withStyle(ChatFormatting.GRAY))
+                                .append(Component.literal("≤ 50.0ms\n\n").withStyle(ChatFormatting.GREEN))
+                                .append(Component.literal("平均: ").withStyle(ChatFormatting.GRAY))
+                                .append(Component.literal(DECIMAL_FORMAT.format(tickStats.avg) + "ms\n").withStyle(ChatFormatting.WHITE))
+                                .append(Component.literal("中位数: ").withStyle(ChatFormatting.GRAY))
+                                .append(Component.literal(DECIMAL_FORMAT.format(tickStats.median) + "ms\n").withStyle(ChatFormatting.WHITE))
+                                .append(Component.literal("最小值: ").withStyle(ChatFormatting.GRAY))
+                                .append(Component.literal(DECIMAL_FORMAT.format(tickStats.min) + "ms\n").withStyle(ChatFormatting.GREEN))
+                                .append(Component.literal("最大值: ").withStyle(ChatFormatting.GRAY))
+                                .append(Component.literal(DECIMAL_FORMAT.format(tickStats.max) + "ms\n").withStyle(ChatFormatting.RED))
+                                .append(Component.literal("95分位: ").withStyle(ChatFormatting.GRAY))
+                                .append(Component.literal(DECIMAL_FORMAT.format(tickStats.percentile95) + "ms").withStyle(ChatFormatting.YELLOW)))));
 
-        MutableComponent info = Component.literal("")
-                .append(interactiveLabel(nm, p + " players",
-                        null, null, ChatFormatting.AQUA))
-                .append(Component.literal(" | ").withStyle(ChatFormatting.GRAY))
-                .append(interactiveLabel("Chunks", String.valueOf(chunks),
-                        null, null, ChatFormatting.LIGHT_PURPLE))
-                .append(Component.literal(" | ").withStyle(ChatFormatting.GRAY))
-                .append(interactiveLabel("Entities", String.valueOf(tot),
-                        null, null,
-                        tot > 1000 ? ChatFormatting.RED : tot > 500 ? ChatFormatting.YELLOW : ChatFormatting.GREEN))
-                .append(Component.literal(" | ").withStyle(ChatFormatting.GRAY))
-                .append(interactiveLabel("Mobs", mons + "/" + cap + " (" + DECIMAL_FORMAT.format(perc * 100) + "%)",
-                        null, null, mobColor));
-        player.sendSystemMessage(info);
-    }
+        player.sendSystemMessage(tpsInfo.append(msptInfo));
 
-    private static MutableComponent interactiveLabel(String label, String value, Component hover, ClickEvent click, ChatFormatting color) {
-        MutableComponent comp = Component.literal(label + ": ").withStyle(ChatFormatting.GRAY)
-                .append(Component.literal(value).withStyle(color));
-        if (hover != null) {
-            comp.withStyle(style -> style.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-                    Component.literal("点击复制：").withStyle(ChatFormatting.GOLD).append(hover))));
+        // MSPT 详细统计
+        player.sendSystemMessage(Component.literal("  Med: ").withStyle(ChatFormatting.DARK_GRAY)
+                .append(Component.literal(DECIMAL_FORMAT.format(tickStats.median))
+                        .withStyle(tickStats.median <= 50 ? ChatFormatting.GREEN : ChatFormatting.YELLOW))
+                .append(Component.literal("ms │ 95%: ").withStyle(ChatFormatting.DARK_GRAY))
+                .append(Component.literal(DECIMAL_FORMAT.format(tickStats.percentile95))
+                        .withStyle(tickStats.percentile95 <= 50 ? ChatFormatting.GREEN :
+                                tickStats.percentile95 <= 100 ? ChatFormatting.YELLOW : ChatFormatting.RED))
+                .append(Component.literal("ms").withStyle(ChatFormatting.DARK_GRAY)));
+
+        // 内存统计
+        MutableComponent memInfo = Component.literal("内存: ").withStyle(ChatFormatting.GRAY)
+                .append(Component.literal(usedMem + "MB").withStyle(
+                        memUsagePercent > 90 ? ChatFormatting.RED :
+                                memUsagePercent > 70 ? ChatFormatting.YELLOW : ChatFormatting.GREEN))
+                .append(Component.literal("/" + maxMem + "MB").withStyle(ChatFormatting.DARK_GRAY))
+                .append(Component.literal(" (" + PERCENT_FORMAT.format(memUsagePercent) + "%)")
+                        .withStyle(ChatFormatting.DARK_GRAY))
+                .append(Component.literal(" │ 已分配: ").withStyle(ChatFormatting.DARK_GRAY))
+                .append(Component.literal(allocatedMem + "MB").withStyle(ChatFormatting.GRAY))
+                .withStyle(style -> style.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                        Component.literal("内存使用情况\n\n").withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD)
+                                .append(Component.literal("已用: ").withStyle(ChatFormatting.GRAY))
+                                .append(Component.literal(usedMem + "MB\n").withStyle(ChatFormatting.WHITE))
+                                .append(Component.literal("已分配: ").withStyle(ChatFormatting.GRAY))
+                                .append(Component.literal(allocatedMem + "MB\n").withStyle(ChatFormatting.WHITE))
+                                .append(Component.literal("最大: ").withStyle(ChatFormatting.GRAY))
+                                .append(Component.literal(maxMem + "MB\n").withStyle(ChatFormatting.WHITE))
+                                .append(Component.literal("使用率: ").withStyle(ChatFormatting.GRAY))
+                                .append(Component.literal(PERCENT_FORMAT.format(memUsagePercent) + "%").withStyle(
+                                        memUsagePercent > 90 ? ChatFormatting.RED : ChatFormatting.GREEN)))));
+        player.sendSystemMessage(memInfo);
+
+        // ========== 维度详情（分页） ==========
+        player.sendSystemMessage(Component.literal("─────────────────").withStyle(ChatFormatting.DARK_GRAY));
+
+        List<ServerLevel> allLevels = MinecraftUtil.iterableToStream(server.getAllLevels()).toList();
+
+        List<ServerLevel> levels;
+        if (dimensionFilter != null && !dimensionFilter.isEmpty()) {
+            levels = allLevels.stream()
+                    .filter(level -> level.dimension().location().getPath().equalsIgnoreCase(dimensionFilter) ||
+                            getDimensionName(level).equalsIgnoreCase(dimensionFilter))
+                    .toList();
+            
+            if (levels.isEmpty()) {
+                player.sendSystemMessage(Component.literal("未找到维度: ").withStyle(ChatFormatting.RED)
+                        .append(Component.literal(dimensionFilter).withStyle(ChatFormatting.YELLOW)));
+                player.sendSystemMessage(Component.literal("可用维度: ").withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal(allLevels.stream()
+                                .map(l -> l.dimension().location().getPath())
+                                .reduce((a, b) -> a + ", " + b)
+                                .orElse("无")).withStyle(ChatFormatting.AQUA)));
+                player.sendSystemMessage(Component.literal("━━━━━━━━━━━━━━━━━").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
+                return;
+            }
+        } else {
+            levels = allLevels;
         }
-        if (click != null) comp.withStyle(style -> style.withClickEvent(click));
-        return comp.append("  ");
+        
+        int totalLevels = levels.size();
+        int totalPages = (int) Math.ceil((double) totalLevels / DIMENSIONS_PER_PAGE);
+
+        if (page < 1) page = 1;
+        if (page > totalPages) page = totalPages;
+        
+        int startIdx = (page - 1) * DIMENSIONS_PER_PAGE;
+        int endIdx = Math.min(startIdx + DIMENSIONS_PER_PAGE, totalLevels);
+
+        for (int i = startIdx; i < endIdx; i++) {
+            boolean isLast = i == endIdx - 1;
+            sendWorldInfo(player, levels.get(i), isLast);
+        }
+
+        if (totalPages > 1 || dimensionFilter != null) {
+            MutableComponent pageNav = Component.literal("─── ").withStyle(ChatFormatting.DARK_GRAY);
+
+            if (page > 1) {
+                String cmd = dimensionFilter != null ? 
+                        "/gugugu showstats " + (page - 1) + " " + dimensionFilter :
+                        "/gugugu showstats " + (page - 1);
+                pageNav.append(Component.literal("[<]").withStyle(ChatFormatting.YELLOW)
+                        .withStyle(style -> style
+                                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                                        Component.literal("上一页").withStyle(ChatFormatting.YELLOW)))
+                                .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, cmd))));
+            } else {
+                pageNav.append(Component.literal("[<]").withStyle(ChatFormatting.DARK_GRAY));
+            }
+
+            if (dimensionFilter != null) {
+                pageNav.append(Component.literal(" 维度: ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal(dimensionFilter).withStyle(ChatFormatting.AQUA))
+                        .append(Component.literal(" (" + totalLevels + ") ")
+                                .withStyle(ChatFormatting.DARK_GRAY));
+            } else {
+                pageNav.append(Component.literal(" 维度 ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal(page + "/" + totalPages).withStyle(ChatFormatting.WHITE))
+                        .append(Component.literal(" (" + startIdx + "-" + (endIdx - 1) + "/" + (totalLevels - 1) + ") ")
+                                .withStyle(ChatFormatting.DARK_GRAY));
+            }
+
+            if (page < totalPages) {
+                String cmd = dimensionFilter != null ? 
+                        "/gugugu showstats " + (page + 1) + " " + dimensionFilter :
+                        "/gugugu showstats " + (page + 1);
+                pageNav.append(Component.literal("[>]").withStyle(ChatFormatting.YELLOW)
+                        .withStyle(style -> style
+                                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                                        Component.literal("下一页").withStyle(ChatFormatting.YELLOW)))
+                                .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, cmd))));
+            } else {
+                pageNav.append(Component.literal("[>]").withStyle(ChatFormatting.DARK_GRAY));
+            }
+
+            if (dimensionFilter != null) {
+                pageNav.append(Component.literal(" [全部]").withStyle(ChatFormatting.GOLD)
+                        .withStyle(style -> style
+                                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                                        Component.literal("查看所有维度").withStyle(ChatFormatting.YELLOW)))
+                                .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND,
+                                        "/gugugu showstats 1"))));
+            }
+            
+            pageNav.append(Component.literal(" ───").withStyle(ChatFormatting.DARK_GRAY));
+            player.sendSystemMessage(pageNav);
+        }
+        
+        player.sendSystemMessage(Component.literal("━━━━━━━━━━━━━━━━━").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
     }
+
+    private static void sendWorldInfo(ServerPlayer player, ServerLevel lvl, boolean isLast) {
+        String dimensionName = getDimensionName(lvl);
+        String dimensionKey = lvl.dimension().location().getPath();
+        int playerCount = lvl.players().size();
+        int chunks = lvl.getChunkSource().getLoadedChunksCount();
+        int tickingChunks = lvl.getChunkSource().getTickingGenerated();
+
+        ServerChunkCache chunkSource = lvl.getChunkSource();
+        int spawnableChunks = chunkSource.chunkMap.getDistanceManager().getNaturalSpawnChunkCount();
+
+        NaturalSpawner.SpawnState spawnState = lvl.getChunkSource().getLastSpawnState();
+        MobCategoryStats monsterStats = getMobCategoryStats(spawnState, MobCategory.MONSTER, spawnableChunks);
+        MobCategoryStats creatureStats = getMobCategoryStats(spawnState, MobCategory.CREATURE, spawnableChunks);
+        MobCategoryStats waterCreatureStats = getMobCategoryStats(spawnState, MobCategory.WATER_CREATURE, spawnableChunks);
+        MobCategoryStats waterAmbientStats = getMobCategoryStats(spawnState, MobCategory.WATER_AMBIENT, spawnableChunks);
+
+        int totalEntities = spawnState.getMobCategoryCounts().values().stream().mapToInt(Integer::intValue).sum();
+
+        ChatFormatting entityColor = totalEntities > 1000 ? ChatFormatting.RED :
+                totalEntities > 500 ? ChatFormatting.YELLOW : ChatFormatting.GREEN;
+
+        ChatFormatting chunkColor = chunks > 5000 ? ChatFormatting.RED :
+                chunks > 3000 ? ChatFormatting.YELLOW : ChatFormatting.GREEN;
+
+        String prefix = isLast ? "└ " : "├ ";
+
+        MutableComponent dimensionLine = Component.literal(prefix).withStyle(ChatFormatting.GRAY)
+                .append(Component.literal(dimensionName).withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD)
+                        .withStyle(style -> style
+                                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                                        Component.literal("点击查看该维度详情\n").withStyle(ChatFormatting.YELLOW)
+                                                .append(Component.literal("维度ID: ").withStyle(ChatFormatting.GRAY))
+                                                .append(Component.literal(dimensionKey).withStyle(ChatFormatting.AQUA))))
+                                .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND,
+                                        "/gugugu showstats 1 " + dimensionKey))))
+                .append(Component.literal(" │ ").withStyle(ChatFormatting.DARK_GRAY))
+                .append(Component.literal("玩家:").withStyle(ChatFormatting.DARK_GRAY))
+                .append(Component.literal(String.valueOf(playerCount))
+                        .withStyle(playerCount > 0 ? ChatFormatting.GREEN : ChatFormatting.GRAY))
+                .append(Component.literal(" │ ").withStyle(ChatFormatting.DARK_GRAY))
+                .append(Component.literal("区块:").withStyle(ChatFormatting.DARK_GRAY))
+                .append(Component.literal(String.valueOf(chunks)).withStyle(chunkColor))
+                .append(Component.literal("/" + tickingChunks).withStyle(ChatFormatting.DARK_GRAY));
+
+        dimensionLine.withStyle(style -> style.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                Component.literal("维度: " + dimensionKey + "\n\n").withStyle(ChatFormatting.YELLOW)
+                        .append(Component.literal("已加载区块: ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal(chunks + "\n").withStyle(ChatFormatting.WHITE))
+                        .append(Component.literal("活跃区块: ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal(tickingChunks + "\n").withStyle(ChatFormatting.WHITE))
+                        .append(Component.literal("可生成区块: ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal(spawnableChunks + "\n\n").withStyle(ChatFormatting.WHITE))
+                        .append(Component.literal("点击维度名查看详情").withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC)))));
+
+        player.sendSystemMessage(dimensionLine);
+
+        String subPrefix = isLast ? "  " : "│ ";
+
+        MutableComponent entityLine = Component.literal(subPrefix + "实体:").withStyle(ChatFormatting.DARK_GRAY)
+                .append(Component.literal(String.valueOf(totalEntities)).withStyle(entityColor))
+                .append(Component.literal(" [").withStyle(ChatFormatting.DARK_GRAY));
+
+        // 怪物
+        if (monsterStats.cap > 0) {
+            entityLine.append(Component.literal("怪:").withStyle(ChatFormatting.DARK_GRAY))
+                    .append(Component.literal(monsterStats.count + "/" + monsterStats.cap).withStyle(monsterStats.color))
+                    .withStyle(style -> style.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                            Component.literal("怪物生成统计\n\n").withStyle(ChatFormatting.YELLOW)
+                                    .append(Component.literal("当前: ").withStyle(ChatFormatting.GRAY))
+                                    .append(Component.literal(monsterStats.count + "\n").withStyle(ChatFormatting.WHITE))
+                                    .append(Component.literal("上限: ").withStyle(ChatFormatting.GRAY))
+                                    .append(Component.literal(monsterStats.cap + "\n").withStyle(ChatFormatting.WHITE))
+                                    .append(Component.literal("占用率: ").withStyle(ChatFormatting.GRAY))
+                                    .append(Component.literal(PERCENT_FORMAT.format(monsterStats.percent) + "%\n").withStyle(monsterStats.color))
+                                    .append(Component.literal("\n基础上限: 70 × ").withStyle(ChatFormatting.DARK_GRAY))
+                                    .append(Component.literal(spawnableChunks + " / 289").withStyle(ChatFormatting.DARK_GRAY)))));
+        }
+
+        // 动物
+        if (creatureStats.cap > 0) {
+            entityLine.append(Component.literal(" 动:").withStyle(ChatFormatting.DARK_GRAY))
+                    .append(Component.literal(creatureStats.count + "/" + creatureStats.cap).withStyle(creatureStats.color));
+        }
+
+        // 水生生物
+        if (waterCreatureStats.cap > 0 || waterAmbientStats.cap > 0) {
+            int waterTotal = waterCreatureStats.count + waterAmbientStats.count;
+            int waterCap = waterCreatureStats.cap + waterAmbientStats.cap;
+            double waterPercent = waterCap > 0 ? (double) waterTotal / waterCap * 100 : 0;
+            ChatFormatting waterColor = waterPercent < 50 ? ChatFormatting.GREEN :
+                    waterPercent < 80 ? ChatFormatting.YELLOW : ChatFormatting.GOLD;
+            entityLine.append(Component.literal(" 水:").withStyle(ChatFormatting.DARK_GRAY))
+                    .append(Component.literal(waterTotal + "/" + waterCap).withStyle(waterColor));
+        }
+
+        entityLine.append(Component.literal("]").withStyle(ChatFormatting.DARK_GRAY));
+        player.sendSystemMessage(entityLine);
+    }
+
+    private static String getDimensionName(ServerLevel level) {
+        String path = level.dimension().location().getPath();
+        return switch (path) {
+            case "overworld" -> "主世界";
+            case "the_nether" -> "下界";
+            case "the_end" -> "末地";
+            default -> path;
+        };
+    }
+
+    private static String formatUptime(long uptimeMs) {
+        long days = uptimeMs / 86_400_000;
+        long hours = (uptimeMs / 3_600_000) % 24;
+        long minutes = (uptimeMs / 60_000) % 60;
+        long seconds = (uptimeMs / 1000) % 60;
+
+        if (days > 0) {
+            return String.format("%dd %dh %dm", days, hours, minutes);
+        } else if (hours > 0) {
+            return String.format("%dh %dm %ds", hours, minutes, seconds);
+        } else if (minutes > 0) {
+            return String.format("%dm %ds", minutes, seconds);
+        } else {
+            return String.format("%ds", seconds);
+        }
+    }
+
+    private static TickStats calculateTickStats(long[] tickTimesNanos) {
+        if (tickTimesNanos == null || tickTimesNanos.length == 0) {
+            return new TickStats(20.0, 0, 0, 0, 0, 0);
+        }
+
+        double[] tickTimeMs = new double[tickTimesNanos.length];
+        double sum = 0;
+        double min = Double.MAX_VALUE;
+        double max = Double.MIN_VALUE;
+
+        for (int i = 0; i < tickTimesNanos.length; i++) {
+            double ms = tickTimesNanos[i] / 1_000_000.0;
+            tickTimeMs[i] = ms;
+            sum += ms;
+            min = Math.min(min, ms);
+            max = Math.max(max, ms);
+        }
+
+        double avg = sum / tickTimesNanos.length;
+        double tps = Math.min(1000.0 / avg, 20.0);
+        Arrays.sort(tickTimeMs);
+
+        double median;
+        int midIndex = tickTimeMs.length / 2;
+        if (tickTimeMs.length % 2 == 0) {
+            median = (tickTimeMs[midIndex - 1] + tickTimeMs[midIndex]) / 2.0;
+        } else {
+            median = tickTimeMs[midIndex];
+        }
+
+        double percentile95 = calculatePercentile(tickTimeMs, 0.95);
+
+        return new TickStats(tps, avg, median, min, max, percentile95);
+    }
+
+    private static double calculatePercentile(double[] sortedArray, double percentile) {
+        if (sortedArray.length == 0) return 0;
+        if (sortedArray.length == 1) return sortedArray[0];
+
+        double pos = (sortedArray.length - 1) * percentile;
+        int base = (int) Math.floor(pos);
+        double rest = pos - base;
+
+        if (base + 1 < sortedArray.length) {
+            return sortedArray[base] + rest * (sortedArray[base + 1] - sortedArray[base]);
+        } else {
+            return sortedArray[base];
+        }
+    }
+
+    private static MobCategoryStats getMobCategoryStats(NaturalSpawner.SpawnState spawnState, MobCategory category, int spawnableChunks) {
+        if (spawnState == null) {
+            return new MobCategoryStats(0, 0, 0, ChatFormatting.GRAY);
+        }
+
+        int count = spawnState.getMobCategoryCounts().getOrDefault(category, 0);
+        int baseCap = category.getMaxInstancesPerChunk();
+        int cap = baseCap * spawnableChunks / 289;
+        double percent = cap > 0 ? (double) count / cap * 100 : 0;
+
+        ChatFormatting color = percent < 50 ? ChatFormatting.GREEN :
+                percent < 80 ? ChatFormatting.YELLOW :
+                        percent < 100 ? ChatFormatting.GOLD : ChatFormatting.RED;
+
+        return new MobCategoryStats(count, cap, percent, color);
+    }
+
+    private record MobCategoryStats(int count, int cap, double percent, ChatFormatting color) {
+    }
+
+    private record TickStats(double tps, double avg, double median, double min, double max, double percentile95) {
+    }
+
+
 }

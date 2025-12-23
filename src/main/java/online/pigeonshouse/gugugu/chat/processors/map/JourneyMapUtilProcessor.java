@@ -108,7 +108,8 @@ public class JourneyMapUtilProcessor implements MessageProcessor {
         if (coordMatcher.matches()) {
             ServerPlayer sender = context.getSender();
             int x = Integer.parseInt(coordMatcher.group(1));
-            int y; int z;
+            int y;
+            int z;
             if (coordMatcher.group(3) != null) {
                 y = Integer.parseInt(coordMatcher.group(2));
                 z = Integer.parseInt(coordMatcher.group(3));
