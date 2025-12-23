@@ -176,7 +176,7 @@ GuGuGu 模组提供全面的服务器管理工具，增强玩家体验和服务�
 # 创建备份
 /gu backup incremental                                         # 增量备份
 /gu backup full                                                # 全量备份
-/gu backup manual create <名称> [force]                        # 创建命名备份
+/gu backup manual create <名称> [消息] [force]                 # 创建命名备份
 
 # 列出与删除
 /gu backup list                                                # 列出全量备份
