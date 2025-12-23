@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.mojang.brigadier.CommandDispatcher;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import net.fabricmc.api.ModInitializer;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.server.MinecraftServer;
@@ -28,7 +29,7 @@ import java.nio.file.Path;
 import java.util.Map;
 
 @Slf4j
-public class GuGuGu {
+public class GuGuGu implements ModInitializer {
     public static final String MOD_ID = "gugugu";
     public static final String MOD_VERSION = "1.0.0.0";
     @Getter
@@ -50,10 +51,7 @@ public class GuGuGu {
     @Getter
     private Map<String, String> lang;
 
-    public GuGuGu() {
-        onInitialize();
-    }
-
+    @Override
     public void onInitialize() {
         INSTANCE = this;
         initLang();
