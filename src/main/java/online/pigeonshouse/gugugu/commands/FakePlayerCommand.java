@@ -6,14 +6,18 @@ import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.AngleArgument;
+import net.minecraft.commands.arguments.DimensionArgument;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.commands.arguments.GameModeArgument;
 import net.minecraft.commands.arguments.SlotArgument;
 import net.minecraft.commands.arguments.coordinates.Vec3Argument;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.level.Level;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
@@ -46,15 +50,45 @@ public class FakePlayerCommand {
                 .then(Commands.literal("help")
                         .executes(FakePlayerCommand::showHelp)
                 )
-                // spawn - 召唤假人
+                // spawn - 召唤假人（支持多种参数组合）
                 .then(Commands.literal("spawn")
                         .then(Commands.argument("name", StringArgumentType.string())
-                                .executes(ctx -> spawnFakePlayer(ctx, null, null))
-                                .then(Commands.argument("gamemode", GameModeArgument.gameMode())
-                                        .executes(ctx -> spawnFakePlayer(ctx, GameModeArgument.getGameMode(ctx, "gamemode"), null))
-                                        .then(Commands.argument("pos", Vec3Argument.vec3())
-                                                .executes(ctx -> spawnFakePlayer(ctx, GameModeArgument.getGameMode(ctx, "gamemode"),
-                                                        Vec3Argument.getVec3(ctx, "pos")))
+                                // spawn <名称>
+                                .executes(ctx -> spawnFakePlayer(ctx))
+                                // spawn <名称> <坐标>
+                                .then(Commands.argument("pos", Vec3Argument.vec3())
+                                        .executes(ctx -> spawnFakePlayer(ctx))
+                                        // spawn <名称> <坐标> <朝向>
+                                        .then(Commands.argument("yaw", AngleArgument.angle())
+                                                .then(Commands.argument("pitch", AngleArgument.angle())
+                                                        .executes(ctx -> spawnFakePlayer(ctx))
+                                                        // spawn <名称> <坐标> <朝向> in <维度>
+                                                        .then(Commands.literal("in")
+                                                                .then(Commands.argument("dimension", DimensionArgument.dimension())
+                                                                        .executes(ctx -> spawnFakePlayer(ctx))
+                                                                        // spawn <名称> <坐标> <朝向> in <维度> mode <游戏模式>
+                                                                        .then(Commands.literal("mode")
+                                                                                .requires(r -> r.hasPermission(4))
+                                                                                .then(Commands.argument("gamemode", GameModeArgument.gameMode())
+                                                                                        .executes(ctx -> spawnFakePlayer(ctx))
+                                                                                )
+                                                                        )
+                                                                )
+                                                        )
+                                                )
+                                        )
+                                        // spawn <名称> <坐标> in <维度>
+                                        .then(Commands.literal("in")
+                                                .then(Commands.argument("dimension", DimensionArgument.dimension())
+                                                        .executes(ctx -> spawnFakePlayer(ctx))
+                                                        // spawn <名称> <坐标> in <维度> mode <游戏模式>
+                                                        .then(Commands.literal("mode")
+                                                                .requires(r -> r.hasPermission(4))
+                                                                .then(Commands.argument("gamemode", GameModeArgument.gameMode())
+                                                                        .executes(ctx -> spawnFakePlayer(ctx))
+                                                                )
+                                                        )
+                                                )
                                         )
                                 )
                         )
@@ -353,33 +387,64 @@ public class FakePlayerCommand {
 
     // ==================== 假人生命周期 ====================
 
-    private static int spawnFakePlayer(CommandContext<CommandSourceStack> ctx, GameType gameMode, Vec3 pos) {
+    private static int spawnFakePlayer(CommandContext<CommandSourceStack> ctx) {
         CommandSourceStack source = ctx.getSource();
         String name = StringArgumentType.getString(ctx, "name");
         MinecraftServer server = source.getServer();
 
-        // 默认游戏模式
-        if (gameMode == null) {
-            gameMode = GameType.SURVIVAL;
-        }
-
-        // 默认位置（命令执行者位置）
-        if (pos == null) {
+        Vec3 pos;
+        try {
+            pos = Vec3Argument.getVec3(ctx, "pos");
+        } catch (IllegalArgumentException e) {
             try {
                 ServerPlayer executor = source.getPlayerOrException();
                 pos = executor.position();
-            } catch (Exception e) {
+            } catch (Exception ex) {
                 pos = new Vec3(0, 64, 0);
             }
         }
 
-        ServerLevel level = source.getLevel();
+        float yaw = 0;
+        float pitch = 0;
+        try {
+            yaw = AngleArgument.getAngle(ctx, "yaw");
+            pitch = AngleArgument.getAngle(ctx, "pitch");
+        } catch (IllegalArgumentException e) {
+            // 无朝向参数，使用默认值或命令执行者朝向
+            try {
+                ServerPlayer executor = source.getPlayerOrException();
+                yaw = executor.getYRot();
+                pitch = executor.getXRot();
+            } catch (Exception ex) {
+                // 使用默认值 0, 0
+            }
+        }
+
+        ServerLevel level;
+        try {
+            level = DimensionArgument.getDimension(ctx, "dimension");
+        } catch (IllegalArgumentException | CommandSyntaxException e) {
+            // 无维度参数，使用命令执行者所在维度
+            level = source.getLevel();
+        }
+
+        GameType gameMode;
+        try {
+            gameMode = GameModeArgument.getGameMode(ctx, "gamemode");
+        } catch (IllegalArgumentException | CommandSyntaxException e) {
+            // 无游戏模式参数，使用默认值
+            gameMode = GameType.SURVIVAL;
+        }
+
         Vec3 finalPos = pos;
+        ServerLevel finalLevel = level;
         GameType finalGameMode = gameMode;
+        float finalYaw = yaw;
+        float finalPitch = pitch;
 
         RIFakeServerPlayerFactory.createFakeServerPlayer(
-                server, name, level, finalGameMode,
-                finalPos.x, finalPos.y, finalPos.z, 0, 0
+                server, name, finalLevel, finalGameMode,
+                finalPos.x, finalPos.y, finalPos.z, finalYaw, finalPitch
         ).thenAccept(fakePlayer -> {
             source.sendSuccess(() -> MinecraftUtil.translate("gugugu.fakeplayer.spawn.success", name)
                     .withStyle(ChatFormatting.GREEN), true);

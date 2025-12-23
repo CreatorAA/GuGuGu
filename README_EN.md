@@ -87,10 +87,14 @@ Inspired by Carpet Mod, providing realistic fake player functionality.
 
 ```bash
 # Lifecycle Management
-/gu fakeplayer spawn <name>                                    # Spawn fake player at current position
-/gu fakeplayer spawn <name> <gamemode>                         # Spawn with specific gamemode
-/gu fakeplayer spawn <name> <gamemode> <pos>                   # Spawn at specific position
-/gu fakeplayer kill <fakeplayer>                               # Remove fake player
+/gu fakeplayer spawn <name>                                           # Spawn at current position
+/gu fakeplayer spawn <name> <pos>                                     # Spawn at specified position
+/gu fakeplayer spawn <name> <pos> <yaw> <pitch>                       # Spawn with position and rotation
+/gu fakeplayer spawn <name> <pos> in <dimension>                      # Spawn in specific dimension
+/gu fakeplayer spawn <name> <pos> <yaw> <pitch> in <dimension>        # Spawn with rotation in dimension
+/gu fakeplayer spawn <name> <pos> in <dimension> mode <gamemode>      # Spawn with dimension and gamemode
+/gu fakeplayer spawn <name> <pos> <yaw> <pitch> in <dimension> mode <gamemode> # Spawn with all parameters
+/gu fakeplayer kill <fakeplayer>                                      # Remove fake player
 
 # Basic Actions
 /gu fakeplayer action <player> attack [once] [interval]        # Attack
