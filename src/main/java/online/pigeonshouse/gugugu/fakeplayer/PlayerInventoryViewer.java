@@ -2,7 +2,6 @@ package online.pigeonshouse.gugugu.fakeplayer;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.Style;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.SimpleMenuProvider;
@@ -53,8 +52,6 @@ public class PlayerInventoryViewer extends SimpleContainer {
                 MinecraftUtil.translate("gugugu.inventory_viewer.glass.filler"));
     }
 
-    EventCallback<MinecraftServerEvents.ServerTickEvent> eventCallback = this::updateContainer;
-
     private static ItemStack buildWhiteGlass() {
         return Items.WHITE_STAINED_GLASS_PANE.getDefaultInstance();
     }
@@ -67,7 +64,7 @@ public class PlayerInventoryViewer extends SimpleContainer {
     private static ItemStack buildCloseGlass() {
         return MinecraftUtil.setHoverName(Items.RED_STAINED_GLASS_PANE.getDefaultInstance(),
                 MinecraftUtil.translate("gugugu.inventory_viewer.glass.close"));
-    }
+    }    EventCallback<MinecraftServerEvents.ServerTickEvent> eventCallback = this::updateContainer;
 
     private static ItemStack[] buildMainHandGlass(int mainHand) {
         ItemStack[] itemStacks = new ItemStack[9];
@@ -241,4 +238,8 @@ public class PlayerInventoryViewer extends SimpleContainer {
             super.clicked(i, j, clickType, player);
         }
     }
+
+
+
+
 }

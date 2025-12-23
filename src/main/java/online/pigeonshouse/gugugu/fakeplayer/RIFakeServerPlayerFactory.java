@@ -72,14 +72,13 @@ public class RIFakeServerPlayerFactory {
     ) {
         RIFakeServerPlayer player = new RIFakeServerPlayer(server, serverLevel, gameProfile);
         Connection fakeConnection = RIFakeServerPlayer.createFakeConnection(PacketFlow.SERVERBOUND);
-
         try {
             GameProfileCache.setUsesAuthentication(false);
             server.executeBlocking(() -> server.getPlayerList().placeNewPlayer(fakeConnection, player));
         } finally {
             GameProfileCache.setUsesAuthentication(server.isDedicatedServer() && server.usesAuthentication());
-
             if (GuGuGu.INSTANCE.getFakePlayerConfig().isAllowFakeServerGamePacketListenerImpl() && MinecraftUtil.findCarpetMod()) {
+
                 FakePlayerConfig fakePlayerConfig = GuGuGu.INSTANCE.getFakePlayerConfig();
                 fakePlayerConfig.setAllowFakeServerGamePacketListenerImpl(false);
 

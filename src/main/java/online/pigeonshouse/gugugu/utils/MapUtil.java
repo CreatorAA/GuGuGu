@@ -163,17 +163,6 @@ public class MapUtil {
 
     public static EntityPersistentStorage<Entity> createEntityPersistentStorage(ServerLevel level, Path levelDir) {
         MinecraftServer server = level.getServer();
-//        return new EntityStorage(
-//                new SimpleRegionStorage(
-//                        new RegionStorageInfo(getSaveName(), level.dimension(), "entities"),
-//                        levelDir.resolve("entities"),
-//                        server.getFixerUpper(),
-//                        server.forceSynchronousWrites(),
-//                        DataFixTypes.ENTITY_CHUNK
-//                ),
-//                level,
-//                server
-//        );
         return new EntityStorage(
                 level,
                 levelDir.resolve("entities"),

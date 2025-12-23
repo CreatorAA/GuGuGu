@@ -1,6 +1,5 @@
 package online.pigeonshouse.gugugu.utils;
 
-import com.mojang.datafixers.DataFixer;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import lombok.Getter;
@@ -22,8 +21,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunkSection;
 import net.minecraft.world.level.chunk.PalettedContainer;
 import net.minecraft.world.level.chunk.PalettedContainerRO;
+import net.minecraft.world.level.chunk.storage.ChunkSerializer;
 
-import java.nio.file.Path;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -32,7 +31,7 @@ import java.util.regex.Pattern;
  * WorldManage 用于管理加载的 Minecraft 区域数据，
  * 提供跨区域、跨区块的查询工具。
  */
-public class WorldManage {
+public class WorldManager {
     public static final BlockState AIR = Blocks.AIR.defaultBlockState();
     private static final PalettedContainer.Strategy STRATEGY = PalettedContainer.Strategy.SECTION_STATES;
 
@@ -58,7 +57,7 @@ public class WorldManage {
      *
      * @param regionData 键为区域文件名（如 r.0.0.mca），值为该区域所有区块的 ScanResult 列表
      */
-    public WorldManage(ServerLevel level, Map<String, List<ReadRegionExecutorService.ScanResult>> regionData) {
+    public WorldManager(ServerLevel level, Map<String, List<ReadRegionExecutorService.ScanResult>> regionData) {
         this.level = level;
         init(regionData.values());
     }
@@ -215,14 +214,14 @@ public class WorldManage {
         return map;
     }
 
+    public void clear() {
+        sections.clear();
+        chunkTags.clear();
+    }
+
     /**
      * 区域坐标记录，包含 x, z
      */
     public record RegionCoords(int x, int z) {
-    }
-
-    public void clear() {
-        sections.clear();
-        chunkTags.clear();
     }
 }

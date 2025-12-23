@@ -2,12 +2,11 @@ package online.pigeonshouse.gugugu.chat;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.MutableComponent;
+import online.pigeonshouse.gugugu.GuGuGu;
 import online.pigeonshouse.gugugu.chat.processors.ComponentRenderer;
-import online.pigeonshouse.gugugu.chat.processors.map.JourneyMapUtilProcessor;
 import online.pigeonshouse.gugugu.chat.processors.MentionNotifier;
+import online.pigeonshouse.gugugu.chat.processors.map.JourneyMapUtilProcessor;
 import online.pigeonshouse.gugugu.chat.processors.map.XaeroMapUtilProcessor;
 import online.pigeonshouse.gugugu.chat.processors.parser.HandItemParser;
 import online.pigeonshouse.gugugu.chat.processors.parser.LinkParser;
@@ -106,6 +105,8 @@ public class ChatEventHandler implements EventCallback<MinecraftServerEvents.Pla
 
     @Override
     public void onEvent(MinecraftServerEvents.PlayerChatEvent event) {
+        if (!GuGuGu.getINSTANCE().getConfig().isEnableMessageHandler()) return;
+
         Component newComponent = pipeline.processMessage(
                 event.getPlayer(),
                 event.getOriginalComponent().getString()

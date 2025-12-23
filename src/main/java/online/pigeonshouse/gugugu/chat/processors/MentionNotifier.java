@@ -20,9 +20,7 @@ public class MentionNotifier implements MessageProcessor {
         Set<ServerPlayer> mentioned = context.getMentionedPlayers();
         mentioned.remove(context.getSender());
 
-        Component notification = Component.literal(context.getSender().getName().getString())
-                .append(" ")
-                .append(MinecraftUtil.translate("chat.gugugu.mention"));
+        Component notification = MinecraftUtil.translate("gugugu.chatEvent.mention_notification", context.getSender().getName().getString());
 
         mentioned.forEach(player -> {
                     player.sendSystemMessage(notification, true);

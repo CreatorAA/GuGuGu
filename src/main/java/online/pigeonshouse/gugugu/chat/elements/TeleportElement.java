@@ -26,7 +26,7 @@ public class TeleportElement implements MessageElement {
                         .withUnderlined(true)
                         .withClickEvent(new ClickEvent(
                                 ClickEvent.Action.RUN_COMMAND,
-                                "/tpf " + targetPlayer.getName().getString()
+                                "/gu tpf " + targetPlayer.getName().getString()
                         ))
                         .withHoverEvent(new HoverEvent(
                                 HoverEvent.Action.SHOW_TEXT,

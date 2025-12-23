@@ -5,7 +5,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.ComponentUtils;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -20,7 +19,6 @@ import online.pigeonshouse.gugugu.GuGuGu;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -207,15 +205,6 @@ public class MinecraftUtil {
         return StreamSupport.stream(iterable.spliterator(), false).collect(Collectors.toList());
     }
 
-    public static boolean findCarpetMod() {
-        try {
-            Class.forName("carpet.CarpetServer");
-            return true;
-        } catch (ClassNotFoundException e) {
-            return false;
-        }
-    }
-
     public static MutableComponent translate(String key, Object... args) {
         String lang = GuGuGu.getINSTANCE()
                 .getLang()
@@ -223,5 +212,14 @@ public class MinecraftUtil {
 
         if (lang != null) return Component.translatableWithFallback(key, lang, args);
         return Component.translatable(key, args);
+    }
+
+    public static boolean findCarpetMod() {
+        try {
+            Class.forName("carpet.CarpetServer");
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
+        }
     }
 }

@@ -1,9 +1,6 @@
-package online.pigeonshouse.gugugu.chat.commands;
+package online.pigeonshouse.gugugu.commands;
 
-import com.mojang.brigadier.CommandDispatcher;
 import net.minecraft.ChatFormatting;
-import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
@@ -14,27 +11,7 @@ import online.pigeonshouse.gugugu.chat.MessageProcessorInfo;
 import online.pigeonshouse.gugugu.utils.MinecraftUtil;
 
 public class ChatCommand {
-    public static void register(CommandDispatcher<CommandSourceStack> dispatcher, MessagePipeline pipeline) {
-        dispatcher.register(
-                Commands.literal("chatEvent")
-                        .then(Commands.literal("components")
-                                .executes(context -> {
-                                    CommandSourceStack source = context.getSource();
-                                    if (source.getEntity() instanceof ServerPlayer player) {
-                                        Component componentsInfo = buildComponentsInfo(pipeline, player);
-                                        source.sendSystemMessage(componentsInfo);
-                                    } else {
-                                        source.sendSystemMessage(
-                                                Component.literal("This command can only be executed by a player")
-                                                        .withStyle(ChatFormatting.RED));
-                                    }
-                                    return 1;
-                                })
-                        )
-        );
-    }
-
-    private static Component buildComponentsInfo(MessagePipeline pipeline, ServerPlayer sender) {
+    public static Component buildComponentsInfo(MessagePipeline pipeline, ServerPlayer sender) {
         MutableComponent header = MinecraftUtil.translate("gugugu.chatEvent.components.header");
 
         MutableComponent content = Component.empty();
