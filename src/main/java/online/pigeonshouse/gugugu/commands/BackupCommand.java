@@ -8,6 +8,7 @@ import com.mojang.brigadier.context.CommandContext;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.commands.arguments.MessageArgument;
 import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.ClickEvent;
@@ -46,9 +47,12 @@ public class BackupCommand {
                 .then(Commands.literal("manual")
                         .then(Commands.literal("create")
                                 .then(Commands.argument("name", StringArgumentType.string())
-                                        .executes(ctx -> executeManualBackup(ctx, false))
-                                        .then(Commands.argument("force", BoolArgumentType.bool())
-                                                .executes(ctx -> executeManualBackup(ctx, BoolArgumentType.getBool(ctx, "force")))
+                                        .executes(ctx -> executeManualBackup(ctx, null, false))
+                                        .then(Commands.argument("message", MessageArgument.message())
+                                                .executes(ctx -> executeManualBackup(ctx, MessageArgument.getMessage(ctx, "message").getString(), false))
+                                                .then(Commands.argument("force", BoolArgumentType.bool())
+                                                        .executes(ctx -> executeManualBackup(ctx, MessageArgument.getMessage(ctx, "message").getString(), BoolArgumentType.getBool(ctx, "force")))
+                                                )
                                         )
                                 )
                         )
@@ -278,15 +282,16 @@ public class BackupCommand {
         return 1;
     }
 
-    private static int executeManualBackup(CommandContext<CommandSourceStack> ctx, boolean force) {
+    private static int executeManualBackup(CommandContext<CommandSourceStack> ctx, String message, boolean force) {
         CommandSourceStack source = ctx.getSource();
         String name = StringArgumentType.getString(ctx, "name");
         BackupManager manager = GuGuGu.getINSTANCE().getBackupManager();
         String creator = getCreatorName(source);
+        String reason = message != null ? message : "Manual backup";
 
         source.sendSystemMessage(MinecraftUtil.translate("gugugu.backup.manual.create.start", name));
 
-        manager.backupManual(name, force, creator, "Manual backup").thenAccept(result -> {
+        manager.backupManual(name, force, creator, reason).thenAccept(result -> {
             if (result.success()) {
                 source.sendSystemMessage(MinecraftUtil.translate("gugugu.backup.manual.create.success", name));
             } else {

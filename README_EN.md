@@ -176,7 +176,7 @@ Advanced backup system with incremental and full backup strategies.
 # Create backups
 /gu backup incremental                                         # Incremental backup
 /gu backup full                                                # Full backup
-/gu backup manual create <name> [force]                        # Create named backup
+/gu backup manual create <name> [message] [force]              # Create named backup
 
 # List and Delete
 /gu backup list                                                # List full backups
